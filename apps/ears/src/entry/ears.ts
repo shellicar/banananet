@@ -71,9 +71,10 @@ const main = async () => {
       }
 
       try {
-        const callbackUrl = callbackServer.createCallbackUrl(channel, batch);
+        const { callbackUrl, completed } = callbackServer.createCallback(channel, batch);
         await brain.respondAsync({ messages: batch, systemPrompt, allowedTools: ['WebSearch', 'WebFetch'], callbackUrl });
-        // Brain accepted (202) — callbacks will handle typing + delivery
+        // Brain accepted (202) — wait for the message callback before processing next batch
+        await completed;
       } catch (error) {
         logger.error(`Error sending to brain: ${error}`, error instanceof Error ? { cause: error.cause } : undefined);
         await channel.sendMessage('Sorry, I encountered an error processing your message.');
