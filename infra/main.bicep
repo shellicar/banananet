@@ -16,6 +16,8 @@ param discordToken string
 param brainKey string
 param discordGuild string
 param botAliases string = ''
+@secure()
+param callbackHeaders string
 
 var org = 'sgh'
 var project = 'banananet'
@@ -188,6 +190,7 @@ module brainApp 'modules/container-app-brain.bicep' = {
     insightsConnectionString: brainInsights.outputs.connectionString
     storageConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${brainStorageRef.name};AccountKey=${brainStorageRef.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
     claudeCodeOauthToken: claudeCodeOauthToken
+    callbackHeaders: callbackHeaders
     existingBuildHash: existingBuildHash
     existingBuildTime: existingBuildTime
   }

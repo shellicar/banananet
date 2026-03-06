@@ -11,4 +11,8 @@ export const brainSchema = z.object({
   SANDBOX_DIR: z.string().default('./sandbox'),
   SANDBOX_COMMANDS: z.string().default(''),
   AUDIT_DIR: z.string().default('/audit'),
+  CALLBACK_HEADERS: z
+    .string()
+    .transform((val) => JSON.parse(val) as Record<string, string>)
+    .pipe(z.record(z.string(), z.string())),
 });

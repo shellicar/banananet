@@ -7,26 +7,30 @@ import { postCallback } from './postCallback';
 import { respondToMessages } from './respondToMessages';
 import type { SandboxConfig } from './types';
 
-export async function processAndCallback(body: z.output<typeof RespondRequestSchema>, audit: AuditWriter, sandboxConfig: SandboxConfig): Promise<void> {
+export async function processAndCallback(body: z.output<typeof RespondRequestSchema>, audit: AuditWriter, sandboxConfig: SandboxConfig, callbackHeaders: Record<string, string>): Promise<void> {
   const { callbackUrl } = body;
 
-  await postCallback(callbackUrl, { type: 'typing' });
+  await postCallback(callbackUrl, { type: 'typing' }, callbackHeaders);
 
   const typingInterval = setInterval(() => {
-    postCallback(callbackUrl, { type: 'typing' });
+    postCallback(callbackUrl, { type: 'typing' }, callbackHeaders);
   }, 8000);
 
   try {
     const replies = await respondToMessages(audit, body, sandboxConfig);
-    await postCallback(callbackUrl, { type: 'message', replies });
+    await postCallback(callbackUrl, { type: 'message', replies }, callbackHeaders);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Background processing failed: ${errorMessage}`);
 
-    await postCallback(callbackUrl, {
-      type: 'message',
-      replies: [{ correlationId: randomUUID(), message: `⚠️ Something went wrong: ${errorMessage}` }],
-    });
+    await postCallback(
+      callbackUrl,
+      {
+        type: 'message',
+        replies: [{ correlationId: randomUUID(), message: `⚠️ Something went wrong: ${errorMessage}` }],
+      },
+      callbackHeaders,
+    );
   } finally {
     clearInterval(typingInterval);
   }

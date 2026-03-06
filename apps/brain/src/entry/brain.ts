@@ -30,7 +30,7 @@ const main = async () => {
   const dockerBuildHash = process.env.BANANABOT_BUILD_HASH;
   logger.info(`Starting brain v${versionInfo.version} (${versionInfo.shortSha}) built ${versionInfo.buildDate} | docker: ${dockerBuildHash} built ${dockerBuildTime}`);
 
-  const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR } = brainSchema.parse(env);
+  const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env);
 
   initSessionPaths(CLAUDE_CONFIG_DIR);
   const audit = new AuditWriter(AUDIT_DIR);
@@ -104,7 +104,7 @@ const main = async () => {
     try {
       const body = RespondRequestSchema.parse(await c.req.json());
 
-      processAndCallback(body, audit, sandboxConfig).catch((error) => {
+      processAndCallback(body, audit, sandboxConfig, CALLBACK_HEADERS).catch((error) => {
         logger.error(`Unhandled error in background processing: ${error}`);
       });
 
