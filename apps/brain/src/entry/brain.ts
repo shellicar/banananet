@@ -13,17 +13,17 @@ import { SdkError } from '@simple-claude-bot/brain-core/errors/SdkError';
 import { getSessionId } from '@simple-claude-bot/brain-core/getSessionId';
 import { initSessionPaths } from '@simple-claude-bot/brain-core/initSessionPaths';
 import { pingSDK } from '@simple-claude-bot/brain-core/ping/pingSDK';
-import { respondToMessages } from '@simple-claude-bot/brain-core/respondToMessages';
+import { processAndCallback } from '@simple-claude-bot/brain-core/processAndCallback';
 import { resetSession } from '@simple-claude-bot/brain-core/session/resetSession';
 import { setSessionId } from '@simple-claude-bot/brain-core/session/setSessionId';
 import type { SandboxConfig } from '@simple-claude-bot/brain-core/types';
 import { sendUnprompted } from '@simple-claude-bot/brain-core/unsolicited/sendUnprompted';
 import { logger } from '@simple-claude-bot/shared/logger';
 import { CompactRequestSchema, DirectRequestSchema, ResetRequestSchema, RespondRequestSchema, SessionSetRequestSchema, UnpromptedRequestSchema } from '@simple-claude-bot/shared/shared/platform/schema';
-import type { CallbackRequest, CompactResponse, DirectResponse, HealthResponse, PingResponse, ResetResponse, RespondResponse, SessionResponse, UnpromptedResponse } from '@simple-claude-bot/shared/shared/types';
+import type { CompactResponse, DirectResponse, HealthResponse, PingResponse, ResetResponse, SessionResponse, UnpromptedResponse } from '@simple-claude-bot/shared/shared/types';
 import { type Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { ZodError, type z } from 'zod';
+import { ZodError } from 'zod';
 
 const main = async () => {
   const dockerBuildTime = process.env.BANANABOT_BUILD_TIME;
@@ -70,54 +70,6 @@ const main = async () => {
     return c.json(jsonBody, statusCode);
   }
 
-  async function postCallback(url: string, payload: CallbackRequest): Promise<void> {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!response.ok) {
-        logger.warn(`Callback to ${url} failed with status ${response.status}`);
-      }
-    } catch (error) {
-      logger.warn(`Callback to ${url} failed: ${error}`);
-    }
-  }
-
-  async function processAndCallback(body: z.output<typeof RespondRequestSchema> & { callbackUrl: string }): Promise<void> {
-    const { callbackUrl } = body;
-
-    // Send initial typing heartbeat immediately
-    await postCallback(callbackUrl, { type: 'typing' });
-
-    // Start periodic typing heartbeat
-    const typingInterval = setInterval(() => {
-      postCallback(callbackUrl, { type: 'typing' });
-    }, 8000);
-
-    try {
-      const replies = await respondToMessages(audit, body, sandboxConfig);
-
-      await postCallback(callbackUrl, {
-        type: 'message',
-        replies,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error(`Background processing failed: ${errorMessage}`);
-
-      // Send error as a message — Brain owns error formatting
-      await postCallback(callbackUrl, {
-        type: 'message',
-        replies: [{ message: `⚠️ Something went wrong: ${errorMessage}` }],
-      });
-    } finally {
-      clearInterval(typingInterval);
-    }
-  }
-
   const app = new Hono();
 
   app.get('/health', (c) => {
@@ -152,18 +104,11 @@ const main = async () => {
     try {
       const body = RespondRequestSchema.parse(await c.req.json());
 
-      if (body.callbackUrl) {
-        // Async mode: return 202 immediately, process in background
-        processAndCallback(body).catch((error) => {
-          logger.error(`Unhandled error in background processing: ${error}`);
-        });
+      processAndCallback(body, audit, sandboxConfig).catch((error) => {
+        logger.error(`Unhandled error in background processing: ${error}`);
+      });
 
-        return c.body(null, 202);
-      }
-
-      // Sync mode: existing behavior (backward compatible)
-      const replies = await respondToMessages(audit, body, sandboxConfig);
-      return c.json({ replies } satisfies RespondResponse);
+      return c.body(null, 202);
     } catch (error) {
       return handleError(c, '/respond', error, { replies: [] });
     }
