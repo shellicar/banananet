@@ -16,7 +16,6 @@ export interface CommandContext {
   setProcessing(p: Promise<void>): void;
   getPlatformChannel(): PlatformChannel | undefined;
   getSystemPrompt(): string;
-  onMessage: (message: PlatformMessageInput) => void;
 }
 
 type CommandHandler = (ctx: CommandContext, args: string[]) => Promise<void>;
