@@ -19,7 +19,8 @@ export async function executeQuery(audit: AuditWriter, endpoint: string, prompt:
     logger.debug(`Still waiting after ${elapsed}s...`);
   }, 5000);
 
-  logger.debug(`Query options: ${JSON.stringify(options, undefined, 2)}`);
+  const { canUseTool, stderr, ...logOptions } = options;
+  logger.debug('Query options', logOptions);
 
   let result = '';
   try {
