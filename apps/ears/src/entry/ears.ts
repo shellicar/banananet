@@ -1,18 +1,22 @@
 import { createInterface } from 'node:readline';
 import { setTimeout } from 'node:timers/promises';
+import { serve } from '@hono/node-server';
 import versionInfo from '@shellicar/build-version/version';
+import { BrainClient } from '@simple-claude-bot/ears-core/brainClient';
+import { CallbackManager } from '@simple-claude-bot/ears-core/callbackManager';
+import type { CommandContext } from '@simple-claude-bot/ears-core/commands';
+import { dispatchCommand } from '@simple-claude-bot/ears-core/commands';
+import { earsSchema } from '@simple-claude-bot/ears-core/earsSchema';
+import { startDiscord } from '@simple-claude-bot/ears-core/platform/discord/startDiscord';
+import type { PlatformChannel } from '@simple-claude-bot/ears-core/platform/types';
+import { buildSystemPrompt } from '@simple-claude-bot/ears-core/systemPrompts';
+import type { PlatformMessageInput } from '@simple-claude-bot/ears-core/types';
+import { resetActivity, seedActivity, startWorkPlay, stopWorkPlay, triggerWorkPlay } from '@simple-claude-bot/ears-core/workplay';
 import { logger } from '@simple-claude-bot/shared/logger';
+import { CallbackRequestSchema } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { CallbackResponse, Reply } from '@simple-claude-bot/shared/shared/types';
-import { BrainClient } from '../brainClient';
-import { CallbackServer } from '../callbackServer';
-import type { CommandContext } from '../commands';
-import { dispatchCommand } from '../commands';
-import { earsSchema } from '../earsSchema';
-import { startDiscord } from '../platform/discord/startDiscord';
-import type { PlatformChannel } from '../platform/types';
-import { buildSystemPrompt } from '../systemPrompts';
-import type { PlatformMessageInput } from '../types';
-import { resetActivity, seedActivity, startWorkPlay, stopWorkPlay, triggerWorkPlay } from '../workplay.js';
+import { Hono } from 'hono';
+import { z } from 'zod';
 
 const main = async () => {
   logger.info(`Starting ears v${versionInfo.version} (${versionInfo.shortSha}) built ${versionInfo.buildDate}`);
@@ -66,13 +70,52 @@ const main = async () => {
     return delivered;
   }
 
-  // Callback server — receives typing heartbeats and message deliveries from Brain
-  const callbackServer = new CallbackServer({
-    port: CALLBACK_PORT,
-    host: CALLBACK_HOST,
-    dispatchReplies,
+  // Callback manager — tracks pending requests for async brain responses
+  const callbackManager = new CallbackManager(CALLBACK_HOST);
+  callbackManager.startCleanup();
+
+  // Callback HTTP server — receives typing heartbeats and message deliveries from Brain
+  const app = new Hono();
+
+  app.get('/', (c) => c.json({ status: 'ok' }));
+
+  app.post('/callback/:requestId', async (c) => {
+    const requestId = c.req.param('requestId');
+    if (!z.uuid().safeParse(requestId).success) {
+      return c.body(null, 400);
+    }
+
+    const context = callbackManager.get(requestId);
+    if (!context) {
+      logger.warn(`Callback for unknown request ${requestId}`);
+      return c.body(null, 404);
+    }
+
+    const payload = CallbackRequestSchema.parse(await c.req.json());
+
+    switch (payload.type) {
+      case 'typing': {
+        await context.channel.sendTyping();
+        return c.json({});
+      }
+
+      case 'message': {
+        try {
+          const delivered = await dispatchReplies(context.channel, payload.replies, context.messages);
+          return c.json({ delivered } satisfies CallbackResponse);
+        } catch (error) {
+          logger.error(`Failed to dispatch replies: ${error}`);
+          return c.json({ delivered: [] } satisfies CallbackResponse, 500);
+        } finally {
+          callbackManager.complete(requestId);
+        }
+      }
+    }
   });
-  callbackServer.start();
+
+  const server = serve({ fetch: app.fetch, port: CALLBACK_PORT }, () => {
+    logger.info(`Callback server listening on port ${CALLBACK_PORT}`);
+  });
 
   const processQueue = async (channel: PlatformChannel) => {
     while (messageQueue.length > 0) {
@@ -83,7 +126,7 @@ const main = async () => {
       }
 
       try {
-        const { callbackUrl, completed } = callbackServer.createCallback(channel, batch);
+        const { callbackUrl, completed } = callbackManager.createCallback(channel, batch);
         logger.info(`Created callback: ${callbackUrl}`);
         await brain.respondAsync({ messages: batch, systemPrompt, allowedTools: ['WebSearch', 'WebFetch'], callbackUrl });
         // Keep brain alive while waiting — periodic health pings prevent idle timeout
@@ -147,7 +190,8 @@ const main = async () => {
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down...`);
     stopWorkPlay();
-    callbackServer.stop();
+    callbackManager.stopCleanup();
+    server.close();
     handle.destroy();
     logger.info('Shutdown complete.');
     process.exit(0);

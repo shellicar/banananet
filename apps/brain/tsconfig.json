@@ -1,11 +1,8 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "@simple-claude-bot/typescript-config/app.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": ".",
-    "moduleResolution": "bundler",
-    "module": "es2022",
-    "target": "es2024"
+    "rootDir": "."
   },
   "include": ["**/*.ts"]
 }

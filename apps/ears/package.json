@@ -11,6 +11,7 @@
   "devDependencies": {
     "@shellicar/build-clean": "^1.2.2",
     "@shellicar/build-version": "^1.3.3",
+    "@simple-claude-bot/typescript-config": "workspace:*",
     "@tsconfig/node22": "^22.0.5",
     "esbuild": "^0.27.3",
     "glob": "^13.0.3",
@@ -20,6 +21,7 @@
   "dependencies": {
     "@hono/node-server": "^1.19.9",
     "@js-joda/core": "^5.7.0",
+    "@simple-claude-bot/ears-core": "workspace:*",
     "@simple-claude-bot/shared": "workspace:^",
     "discord.js": "^14.25.1",
     "file-type": "^21.3.0",

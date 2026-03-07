@@ -80,3 +80,4 @@ resource auditStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-pre
 
 output id string = env.id
 output name string = env.name
+output defaultDomain string = env.properties.defaultDomain

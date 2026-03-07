@@ -1,11 +1,9 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "extends": "@simple-claude-bot/typescript-config/library.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
-    "moduleResolution": "bundler",
-    "module": "es2022",
-    "target": "es2024"
+    "rootDir": "src"
   },
   "include": ["src/**/*.ts"]
 }

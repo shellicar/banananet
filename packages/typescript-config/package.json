@@ -1,0 +1,11 @@
+{
+  "name": "@simple-claude-bot/typescript-config",
+  "version": "0.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.5"
+  },
+  "dependencies": {
+    "tsdown": "^0.21.0"
+  }
+}

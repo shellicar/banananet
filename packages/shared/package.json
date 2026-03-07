@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsdown",
     "type-check": "tsc -p tsconfig.check.json"
   },
   "exports": {
@@ -13,7 +13,9 @@
     }
   },
   "devDependencies": {
+    "@simple-claude-bot/typescript-config": "workspace:*",
     "@tsconfig/node22": "^22.0.5",
+    "tsdown": "^0.12.9",
     "typescript": "^5.9.3"
   },
   "dependencies": {

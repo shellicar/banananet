@@ -265,6 +265,7 @@ module earsApp 'modules/container-app-ears.bicep' = {
     brainKey: brainKey
     sandboxEnabled: 'true'
     botAliases: botAliases
+    callbackHost: 'https://${earsAppName}.${containerEnv.outputs.defaultDomain}'
   }
 }
 

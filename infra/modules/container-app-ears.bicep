@@ -18,6 +18,7 @@ param brainUrl string
 param brainKey string
 param sandboxEnabled string
 param botAliases string = ''
+param callbackHost string
 
 var resolvedImage = image ?? '${acrLoginServer}/${defaultImageName}:${defaultImageTag}'
 
@@ -38,6 +39,18 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
+      ingress: {
+        external: true
+        targetPort: 80
+        transport: 'Auto'
+        allowInsecure: false
+        traffic: [
+          {
+            weight: 100
+            latestRevision: true
+          }
+        ]
+      }
       registries: [
         {
           server: acrLoginServer
@@ -98,6 +111,14 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
               value: botAliases
             }
             {
+              name: 'CALLBACK_HOST'
+              value: callbackHost
+            }
+            {
+              name: 'CALLBACK_PORT'
+              value: '80'
+            }
+            {
               name: 'TZ'
               value: 'Australia/Melbourne'
             }
@@ -113,3 +134,4 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
 }
 
 output name string = app.name
+output fqdn string = app.properties.configuration.ingress.fqdn

@@ -69,6 +69,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/tsdown.config.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
     }
   ],
   "javascript": {
