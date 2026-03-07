@@ -25,7 +25,7 @@ RUN corepack enable pnpm
 # Create non-root user matching host uid for volume permissions
 RUN useradd -m -s /bin/bash -u 1000 -o bot
 
-# Stage 2: Install runtime dependencies (flat, no symlinks — required for claude-sandbox readlink)
+# Stage 2: Install runtime dependencies (flat, no symlinks — required for readlink)
 FROM node:22-slim AS deps
 RUN corepack enable pnpm
 RUN mkdir /tmp/deps
@@ -42,8 +42,8 @@ WORKDIR /app
 # Copy node_modules from deps stage
 COPY --from=deps --chmod=755 /tmp/deps/node_modules node_modules/
 
-# Copy built output (esbuild bundle is self-contained)
-COPY --chmod=750 apps/brain/dist/ dist/
+# Copy built output
+COPY --chmod=755 apps/brain/dist/ dist/
 
 # Copy Claude settings and hooks to staging (volume mount overlays /home/bot/.claude at runtime)
 COPY --chmod=750 claude-home/ /opt/claude-home/
@@ -51,6 +51,7 @@ RUN chmod +x /opt/claude-home/hooks/*.sh
 
 # Copy scripts
 COPY --chmod=755 scripts/claude-sandbox.sh /usr/local/bin/claude-sandbox
+COPY --chmod=755 scripts/claude-sandbox.js /usr/local/bin/claude-sandbox.js
 COPY --chmod=755 scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV TZ=Australia/Melbourne

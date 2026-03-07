@@ -15,15 +15,34 @@ const canUseTool: CanUseTool = async (_toolName, _input, options): Promise<Permi
   };
 };
 
+/* Monkey-patch process.kill to block SIGTERM/SIGKILL to Claude Code subprocesses.
+ * The SDK bypasses our SpawnedProcess.kill() wrapper and calls process.kill(pid) directly.
+ * This intercepts at the only level that matters — the actual syscall wrapper. */
+const protectedPids = new Set<number>();
+const originalKill = process.kill.bind(process);
+process.kill = ((pid: number, signal?: string | number) => {
+  if (protectedPids.has(pid) && (signal === 'SIGTERM' || signal === 15 || signal === 'SIGKILL' || signal === 9)) {
+    logger.info(`Blocked ${String(signal)} to protected pid=${pid}`, { component: 'lifecycle', pid });
+    return true;
+  }
+  return originalKill(pid, signal as string);
+}) as typeof process.kill;
+
 function spawnProtected(options: SdkSpawnOptions): SpawnedProcess {
-  logger.info(`spawnProtected: spawning ${options.command}`, { component: 'lifecycle', options });
+  logger.info(`spawnProtected: spawning ${options.command}`, { component: 'lifecycle' });
   const proc = spawn(options.command, options.args, {
     cwd: options.cwd,
     env: options.env as NodeJS.ProcessEnv,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
-  logger.info(`spawnProtected: spawned pid=${proc.pid}`, { component: 'lifecycle', pid: proc.pid });
+  if (proc.pid) {
+    protectedPids.add(proc.pid);
+    logger.info(`spawnProtected: spawned pid=${proc.pid}, added to protected set`, { component: 'lifecycle', pid: proc.pid });
+  }
   proc.on('exit', (code, signal) => {
+    if (proc.pid) {
+      protectedPids.delete(proc.pid);
+    }
     logger.info(`spawnProtected: pid=${proc.pid} exited code=${code} signal=${signal}`, { component: 'lifecycle', pid: proc.pid, code, signal });
   });
   return {
@@ -36,12 +55,9 @@ function spawnProtected(options: SdkSpawnOptions): SpawnedProcess {
       return proc.exitCode;
     },
     kill(signal: NodeJS.Signals) {
-      if (signal === 'SIGTERM') {
-        logger.info(`Intercepted SIGTERM to Claude Code subprocess pid=${proc.pid}, ignoring`, { component: 'lifecycle', pid: proc.pid });
-        return true;
-      }
-      if (signal === 'SIGKILL') {
-        logger.info(`Intercepted SIGKILL to Claude Code subprocess pid=${proc.pid}, ignoring`, { component: 'lifecycle', pid: proc.pid });
+      logger.info(`wrapper .kill(${signal}) called for pid=${proc.pid}`, { component: 'lifecycle', pid: proc.pid, signal });
+      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+        logger.info(`Intercepted .kill(${signal}) on wrapper pid=${proc.pid}, ignoring`, { component: 'lifecycle', pid: proc.pid });
         return true;
       }
       return proc.kill(signal);
