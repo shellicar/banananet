@@ -1,6 +1,6 @@
 import { ENV_PASSTHROUGH } from './consts';
 
-export function buildSandboxEnv(): Record<string, string> {
+export function buildEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const key of ENV_PASSTHROUGH) {
     if (process.env[key]) {

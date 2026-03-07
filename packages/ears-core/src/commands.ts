@@ -146,7 +146,6 @@ async function handleDirect(ctx: CommandContext, args: string[]): Promise<void> 
   const response = await ctx.brain.direct({
     prompt,
     systemPrompt: buildSystemPrompt({ type: 'direct' }),
-    allowedTools: ['WebSearch', 'WebFetch', 'Bash'],
   });
   if (response.error) {
     logger.error(`Direct query error: ${response.error}`);

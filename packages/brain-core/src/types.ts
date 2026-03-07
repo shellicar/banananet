@@ -12,9 +12,10 @@ export type ResetRequestOutput = z.output<typeof ResetRequestSchema>;
 export type SessionSetRequestOutput = z.output<typeof SessionSetRequestSchema>;
 export type CompactRequestOutput = z.output<typeof CompactRequestSchema>;
 
-export interface SandboxConfig {
-  readonly enabled: boolean;
-  readonly directory: string;
+export interface SdkConfig {
+  readonly cwd: string;
+  readonly defaultMaxTurns: number;
+  readonly workspaceMaxTurns: number;
 }
 export type ClaudeModels = 'claude-opus-4-6' | 'claude-sonnet-4-5-20250929' | 'claude-haiku-4-5-20251001';
 

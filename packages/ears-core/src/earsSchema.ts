@@ -26,7 +26,7 @@ export const earsSchema = z.object({
     .default([]),
   BRAIN_URL: z.string().min(1).default('http://brain:3000'),
   BRAIN_KEY: z.string().min(1).optional(),
-  SANDBOX_ENABLED: z
+  WORKSPACE_ENABLED: z
     .string()
     .transform((val) => val === 'true')
     .default(false),

@@ -6,17 +6,16 @@ import { executeQuery } from '../executeQuery';
 import { claudeGlobals } from '../globals';
 import { parseResponse } from '../parseResponse';
 import { saveSession } from '../session/saveSession';
-import type { SandboxConfig, UnpromptedRequestOutput } from '../types';
+import type { SdkConfig, UnpromptedRequestOutput } from '../types';
 
-export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sandboxConfig: SandboxConfig): Promise<{ replies: Reply[]; spoke: boolean }> {
+export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sdkConfig: SdkConfig): Promise<{ replies: Reply[]; spoke: boolean }> {
   try {
     logger.info(`Unprompted: ${body.prompt}`);
 
     const sdkOptions = buildQueryOptions({
       systemPrompt: body.systemPrompt,
-      allowedTools: body.allowedTools ?? [],
-      maxTurns: body.maxTurns ?? 1,
-      sandboxConfig,
+      capabilities: body.capabilities,
+      sdkConfig,
       sessionId: claudeGlobals.sessionId,
     });
 

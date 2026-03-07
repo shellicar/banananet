@@ -1,6 +1,5 @@
 import { mkdirSync } from 'node:fs';
 import type { Server } from 'node:http';
-import { resolve } from 'node:path';
 import { env } from 'node:process';
 import { serve } from '@hono/node-server';
 import versionInfo from '@shellicar/build-version/version';
@@ -16,7 +15,7 @@ import { pingSDK } from '@simple-claude-bot/brain-core/ping/pingSDK';
 import { processAndCallback } from '@simple-claude-bot/brain-core/processAndCallback';
 import { resetSession } from '@simple-claude-bot/brain-core/session/resetSession';
 import { setSessionId } from '@simple-claude-bot/brain-core/session/setSessionId';
-import type { SandboxConfig } from '@simple-claude-bot/brain-core/types';
+import type { SdkConfig } from '@simple-claude-bot/brain-core/types';
 import { sendUnprompted } from '@simple-claude-bot/brain-core/unsolicited/sendUnprompted';
 import { logger } from '@simple-claude-bot/shared/logger';
 import { CompactRequestSchema, DirectRequestSchema, ResetRequestSchema, RespondRequestSchema, SessionSetRequestSchema, UnpromptedRequestSchema } from '@simple-claude-bot/shared/shared/platform/schema';
@@ -30,18 +29,19 @@ const main = async () => {
   const dockerBuildHash = process.env.BANANABOT_BUILD_HASH;
   logger.info(`Starting brain v${versionInfo.version} (${versionInfo.shortSha}) built ${versionInfo.buildDate} | docker: ${dockerBuildHash} built ${dockerBuildTime}`);
 
-  const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
+  const { CLAUDE_CONFIG_DIR, CLAUDE_SDK_CWD, CLAUDE_SDK_DEFAULT_MAXTURNS, CLAUDE_SDK_WORKSPACE_MAXTURNS, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
 
   initSessionPaths(CLAUDE_CONFIG_DIR);
   const audit = new AuditWriter(AUDIT_DIR);
 
-  const sandboxConfig = {
-    enabled: SANDBOX_ENABLED,
-    directory: resolve(SANDBOX_DIR),
-  } satisfies SandboxConfig;
+  const sdkConfig = {
+    cwd: CLAUDE_SDK_CWD,
+    defaultMaxTurns: CLAUDE_SDK_DEFAULT_MAXTURNS,
+    workspaceMaxTurns: CLAUDE_SDK_WORKSPACE_MAXTURNS,
+  } satisfies SdkConfig;
 
-  mkdirSync(sandboxConfig.directory, { recursive: true });
-  logger.info(`Sandbox ${sandboxConfig.enabled ? 'enabled' : 'disabled'} (cwd: ${sandboxConfig.directory})`);
+  mkdirSync(sdkConfig.cwd, { recursive: true });
+  logger.info(`SdkConfig defaultMaxTurns=${sdkConfig.defaultMaxTurns} workspaceMaxTurns=${sdkConfig.workspaceMaxTurns} (cwd: ${sdkConfig.cwd})`);
 
   function handleError(c: Context, route: string, error: unknown, errorBody: Record<string, unknown>) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -93,7 +93,7 @@ const main = async () => {
 
   app.post('/ping', async (c) => {
     try {
-      const result = await pingSDK(audit, sandboxConfig);
+      const result = await pingSDK(audit, sdkConfig);
       return c.json({ result } satisfies PingResponse);
     } catch (error) {
       return handleError(c, '/ping', error, { result: '' });
@@ -104,7 +104,7 @@ const main = async () => {
     try {
       const body = RespondRequestSchema.parse(await c.req.json(), { reportInput: true });
 
-      processAndCallback(body, audit, sandboxConfig, CALLBACK_HEADERS).catch((error) => {
+      processAndCallback(body, audit, sdkConfig, CALLBACK_HEADERS).catch((error) => {
         logger.error(`Unhandled error in background processing: ${error}`);
       });
 
@@ -117,7 +117,7 @@ const main = async () => {
   app.post('/unprompted', async (c) => {
     try {
       const body = UnpromptedRequestSchema.parse(await c.req.json(), { reportInput: true });
-      const { replies, spoke } = await sendUnprompted(audit, body, sandboxConfig);
+      const { replies, spoke } = await sendUnprompted(audit, body, sdkConfig);
       return c.json({ replies, spoke } satisfies UnpromptedResponse);
     } catch (error) {
       return handleError(c, '/unprompted', error, { replies: [], spoke: false });
@@ -127,7 +127,7 @@ const main = async () => {
   app.post('/direct', async (c) => {
     try {
       const body = DirectRequestSchema.parse(await c.req.json(), { reportInput: true });
-      const result = await directQuery(audit, body, sandboxConfig);
+      const result = await directQuery(audit, body, sdkConfig);
       return c.json({ result } satisfies DirectResponse);
     } catch (error) {
       return handleError(c, '/direct', error, { result: '' });
@@ -137,7 +137,7 @@ const main = async () => {
   app.post('/compact', async (c) => {
     try {
       const body = CompactRequestSchema.parse(await c.req.json(), { reportInput: true });
-      const result = await compactSession(audit, sandboxConfig, body.resumeSessionAt);
+      const result = await compactSession(audit, sdkConfig, body.resumeSessionAt);
       return c.json({ result } satisfies CompactResponse);
     } catch (error) {
       return handleError(c, '/compact', error, { result: '' });
@@ -147,7 +147,7 @@ const main = async () => {
   app.post('/reset', async (c) => {
     try {
       const body = ResetRequestSchema.parse(await c.req.json(), { reportInput: true });
-      const result = await resetSession(audit, body, sandboxConfig);
+      const result = await resetSession(audit, body, sdkConfig);
       return c.json({ result } satisfies ResetResponse);
     } catch (error) {
       return handleError(c, '/reset', error, { result: '' });

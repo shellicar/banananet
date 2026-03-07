@@ -3,12 +3,12 @@ import { resetSession } from '@simple-claude-bot/brain-core/session/resetSession
 import { ResetRequestSchema } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { ResetResponse } from '@simple-claude-bot/shared/shared/types';
 import { handleError, parseJsonBody } from '../../shared/handleError';
-import { audit, sandboxConfig } from '../../shared/startup';
+import { audit, sdkConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
     const body = ResetRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
-    const result = await resetSession(audit, body, sandboxConfig);
+    const result = await resetSession(audit, body, sdkConfig);
     return {
       jsonBody: { result } satisfies ResetResponse,
     };

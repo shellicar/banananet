@@ -20,7 +20,7 @@ param secrets SecretPair[]
 
 param discordGuild string
 param brainUrl string
-param sandboxEnabled string
+param workspaceEnabled string
 param botAliases string
 param callbackHost string
 
@@ -110,8 +110,8 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
               value: brainUrl
             }
             {
-              name: 'SANDBOX_ENABLED'
-              value: sandboxEnabled
+              name: 'WORKSPACE_ENABLED'
+              value: workspaceEnabled
             }
             {
               name: 'BOT_ALIASES'

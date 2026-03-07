@@ -55,8 +55,7 @@ COPY --chmod=755 scripts/claude-sandbox.sh /usr/local/bin/claude-sandbox
 COPY --chmod=755 scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV TZ=Australia/Melbourne
-ENV SANDBOX_DIR=/sandbox
-ENV SANDBOX_ENABLED=true
+ENV CLAUDE_SDK_CWD=/sandbox
 ENV CLAUDE_PATH=/usr/local/bin/claude-sandbox
 ENV CLAUDE_CONFIG_DIR=/home/bot/.claude
 ENV SANDBOX_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"

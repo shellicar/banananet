@@ -1,16 +1,17 @@
 import { existsSync, unlinkSync } from 'node:fs';
 import { Instant } from '@js-joda/core';
 import { logger } from '@simple-claude-bot/shared/logger';
+import { BotCapability } from '@simple-claude-bot/shared/shared/platform/schema';
 import { timestampFormatter } from '@simple-claude-bot/shared/timestampFormatter';
 import { zone } from '@simple-claude-bot/shared/zone';
 import type { AuditWriter } from '../audit/auditLog';
 import { buildQueryOptions } from '../buildQueryOptions';
 import { executeQuery } from '../executeQuery';
 import { claudeGlobals } from '../globals';
-import type { ResetRequestOutput, SandboxConfig } from '../types';
+import type { ResetRequestOutput, SdkConfig } from '../types';
 import { saveSession } from './saveSession';
 
-export async function resetSession(audit: AuditWriter, body: ResetRequestOutput, sandboxConfig: SandboxConfig): Promise<string> {
+export async function resetSession(audit: AuditWriter, body: ResetRequestOutput, sdkConfig: SdkConfig): Promise<string> {
   logger.info('Resetting session...');
 
   // Delete old session
@@ -42,9 +43,9 @@ export async function resetSession(audit: AuditWriter, body: ResetRequestOutput,
 
   const options = buildQueryOptions({
     systemPrompt: body.systemPrompt,
-    allowedTools: [],
+    capabilities: { [BotCapability.Web]: false, [BotCapability.Workspace]: false },
     maxTurns: 10,
-    sandboxConfig: { enabled: false, directory: sandboxConfig.directory },
+    sdkConfig,
     sessionId: undefined,
   });
 

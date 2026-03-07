@@ -28,26 +28,40 @@ export const ReplySchema = z.object({
   message: z.string().describe('The message content to send'),
 });
 
+// --- Capabilities ---
+
+export enum BotCapability {
+  Web = 'WEB',
+  Workspace = 'WORKSPACE',
+}
+
+export const CapabilitiesSchema = z
+  .object({
+    [BotCapability.Web]: z.boolean(),
+    [BotCapability.Workspace]: z.boolean(),
+  })
+  .partial()
+  .optional();
+
 // --- Request schemas ---
 
 export const RespondRequestSchema = z.object({
   messages: z.array(PlatformMessageSchema),
   systemPrompt: z.string(),
-  allowedTools: z.array(z.string()),
+  capabilities: CapabilitiesSchema,
   callbackUrl: z.url(),
 });
 
 export const UnpromptedRequestSchema = z.object({
   prompt: z.string(),
   systemPrompt: z.string(),
-  allowedTools: z.array(z.string()).optional(),
-  maxTurns: z.number().optional(),
+  capabilities: CapabilitiesSchema,
 });
 
 export const DirectRequestSchema = z.object({
   prompt: z.string(),
   systemPrompt: z.string(),
-  allowedTools: z.array(z.string()),
+  capabilities: CapabilitiesSchema,
 });
 
 export const ResetRequestSchema = z.object({

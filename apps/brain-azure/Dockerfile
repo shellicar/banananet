@@ -64,7 +64,6 @@ RUN chmod -R 750 /home/site/wwwroot \
   && chmod +x /usr/local/bin/claude-sandbox \
   && chmod +x /usr/local/bin/entrypoint.sh
 
-ENV SANDBOX_DIR=/sandbox \
-    SANDBOX_ENABLED=true \
+ENV CLAUDE_SDK_CWD=/sandbox \
     CLAUDE_PATH=/usr/local/bin/claude-sandbox \
     CLAUDE_CONFIG_DIR=/home/bot/.claude

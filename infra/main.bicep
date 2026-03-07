@@ -369,7 +369,7 @@ module earsApp 'modules/container-app-ears.bicep' = {
     ]
     discordGuild: discordGuild
     brainUrl: 'https://${brainAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
-    sandboxEnabled: 'true'
+    workspaceEnabled: 'true'
     botAliases: botAliases
     callbackHost: 'https://${earsAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
   }

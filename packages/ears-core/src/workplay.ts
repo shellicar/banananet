@@ -1,5 +1,6 @@
 import { Instant } from '@js-joda/core';
 import { logger } from '@simple-claude-bot/shared/logger';
+import { BotCapability } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { Reply } from '@simple-claude-bot/shared/shared/types';
 import { timestampFormatter } from '@simple-claude-bot/shared/timestampFormatter';
 import { zone } from '@simple-claude-bot/shared/zone';
@@ -7,13 +8,12 @@ import { zone } from '@simple-claude-bot/shared/zone';
 const TICK_INTERVAL_MS = 5 * 60 * 1000;
 const MAX_PROBABILITY = 0.5;
 const PROBABILITY_DIVISOR = 1200;
-const SANDBOX_TOOLS = ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'];
 const QUIET_HOUR_START = 22;
 const QUIET_HOUR_END = 10;
 
 interface WorkPlayConfig {
-  sandboxEnabled: boolean;
-  onIdle: (prompt: string, options: { allowedTools?: string[]; maxTurns?: number }) => Promise<{ replies: Reply[]; spoke: boolean }>;
+  workspaceEnabled: boolean;
+  onIdle: (prompt: string, options: { capabilities?: Partial<Record<BotCapability, boolean>> }) => Promise<{ replies: Reply[]; spoke: boolean }>;
   isProcessing: () => boolean;
   setProcessing: (p: Promise<void>) => void;
   setPresence?: (status: 'online' | 'idle') => void;
@@ -75,9 +75,9 @@ async function onTick(config: WorkPlayConfig): Promise<void> {
 
 function sendIdlePrompt(config: WorkPlayConfig): void {
   const prompt = buildIdlePrompt();
-  const sandboxEnabled = config.sandboxEnabled;
+  const capabilities = config.workspaceEnabled ? undefined : { [BotCapability.Web]: false, [BotCapability.Workspace]: false };
 
-  const task = config.onIdle(prompt, { allowedTools: sandboxEnabled ? SANDBOX_TOOLS : [], maxTurns: sandboxEnabled ? 25 : 1 }).then(({ spoke }) => {
+  const task = config.onIdle(prompt, { capabilities }).then(({ spoke }) => {
     logger.info(`WorkPlay: idle action complete (spoke=${spoke})`);
   });
 
