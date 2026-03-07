@@ -7,7 +7,7 @@ import { audit, sandboxConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const body = UnpromptedRequestSchema.parse(await parseJsonBody(request));
+    const body = UnpromptedRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     const { replies, spoke } = await sendUnprompted(audit, body, sandboxConfig);
     return {
       jsonBody: { replies, spoke } satisfies UnpromptedResponse,

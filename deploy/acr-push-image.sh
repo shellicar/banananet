@@ -2,9 +2,8 @@
 # Reusable functions for building, pushing, and deploying container images.
 # Source this file, then call the functions.
 
-ACR="sghacraue01.azurecr.io"
-ACR_NAME="sghacraue01"
-RESOURCE_GROUP="sgh-rg-aue-dev-banananet-01"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/common.sh"
 
 acr_login() {
   echo "🔐 Logging in to ACR..."

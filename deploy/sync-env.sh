@@ -8,11 +8,14 @@
 
 set -e
 
-STORAGE_ACCOUNT="sghsaauedevbanananet01"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/common.sh"
+
 CONTAINER_NAME="azure-webjobs-secrets"
-APP_NAME="sgh-ca-aue-dev-banananet-01"
+APP_NAME="${BRAIN_APP}"
+STORAGE_ACCOUNT="${BRAIN_STORAGE}"
 BLOB_PATH="${APP_NAME}/host.json"
-ENV_FILE=".env"
+ENV_FILE="../.env"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required but not installed" >&2

@@ -7,7 +7,7 @@ import { initSessionPaths } from '@simple-claude-bot/brain-core/initSessionPaths
 import type { SandboxConfig } from '@simple-claude-bot/brain-core/types';
 import { logger } from '@simple-claude-bot/shared/logger';
 
-const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env);
+const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
 initSessionPaths(CLAUDE_CONFIG_DIR);
 
 export const audit = new AuditWriter(AUDIT_DIR);

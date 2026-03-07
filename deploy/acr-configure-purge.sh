@@ -11,13 +11,15 @@
 
 set -e
 
-ACR="sghacraue01"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/common.sh"
+
 IMAGE_NAME="banananet-brain"
 
 echo "🗑️  Creating ACR purge task for ${IMAGE_NAME}..."
 az acr task create \
   --name "purge-${IMAGE_NAME}" \
-  --registry "${ACR}" \
+  --registry "${ACR_NAME}" \
   --cmd "acr purge --filter '${IMAGE_NAME}:.*' --ago 7d --keep 5 --untagged" \
   --schedule "0 0 * * *" \
   --context /dev/null

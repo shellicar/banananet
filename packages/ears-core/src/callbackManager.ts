@@ -48,7 +48,7 @@ export class CallbackManager {
     });
 
     return {
-      callbackUrl: `${this.host}/api/callback/${requestId}`,
+      callbackUrl: `${this.host}/callback/${requestId}`,
       requestId,
       completed,
     };
@@ -91,7 +91,7 @@ export class CallbackManager {
       return { status: 404, body: null };
     }
 
-    const payload = CallbackRequestSchema.parse(body);
+    const payload = CallbackRequestSchema.parse(body, { reportInput: true });
 
     switch (payload.type) {
       case 'typing': {

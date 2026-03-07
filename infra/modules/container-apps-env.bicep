@@ -34,46 +34,48 @@ resource env 'Microsoft.App/managedEnvironments@2025-02-02-preview' = {
         name: 'Consumption'
       }
     ]
+    peerTrafficConfiguration: {
+      encryption: {
+        enabled: true
+      }
+    }
     publicNetworkAccess: 'Enabled'
     zoneRedundant: false
   }
-}
 
-resource homeStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
-  parent: env
-  name: 'home'
-  properties: {
-    azureFile: {
-      accessMode: 'ReadWrite'
-      accountKey: storage.listKeys().keys[0].value
-      accountName: storage.name
-      shareName: homeShareName
+  resource homeStorage 'storages' = {
+    name: 'home'
+    properties: {
+      azureFile: {
+        accessMode: 'ReadWrite'
+        accountKey: storage.listKeys().keys[0].value
+        accountName: storage.name
+        shareName: homeShareName
+      }
     }
   }
-}
 
-resource sandboxStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
-  parent: env
-  name: 'sandbox'
-  properties: {
-    azureFile: {
-      accessMode: 'ReadWrite'
-      accountKey: storage.listKeys().keys[0].value
-      accountName: storage.name
-      shareName: sandboxShareName
+  resource sandboxStorage 'storages' = {
+    name: 'sandbox'
+    properties: {
+      azureFile: {
+        accessMode: 'ReadWrite'
+        accountKey: storage.listKeys().keys[0].value
+        accountName: storage.name
+        shareName: sandboxShareName
+      }
     }
   }
-}
 
-resource auditStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
-  parent: env
-  name: 'audit'
-  properties: {
-    azureFile: {
-      accessMode: 'ReadWrite'
-      accountKey: storage.listKeys().keys[0].value
-      accountName: storage.name
-      shareName: auditShareName
+  resource auditStorage 'storages' = {
+    name: 'audit'
+    properties: {
+      azureFile: {
+        accessMode: 'ReadWrite'
+        accountKey: storage.listKeys().keys[0].value
+        accountName: storage.name
+        shareName: auditShareName
+      }
     }
   }
 }
@@ -81,3 +83,4 @@ resource auditStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-pre
 output id string = env.id
 output name string = env.name
 output defaultDomain string = env.properties.defaultDomain
+output staticIp string = env.properties.staticIp

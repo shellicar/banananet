@@ -13,6 +13,15 @@ export const brainSchema = z.object({
   AUDIT_DIR: z.string().default('/audit'),
   CALLBACK_HEADERS: z
     .string()
-    .transform((val) => JSON.parse(val) as Record<string, string>)
+    .superRefine((val, ctx) => {
+      try {
+        JSON.parse(val);
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, input: val, message: `CALLBACK_HEADERS is not valid JSON: ${val}` });
+      }
+    })
+    .transform((val) => {
+      return JSON.parse(val);
+    })
     .pipe(z.record(z.string(), z.string())),
 });

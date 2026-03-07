@@ -8,14 +8,16 @@ param defaultImageName string
 param defaultImageTag string
 param image string?
 param uamiId string
-@secure()
-param insightsConnectionString string
-@secure()
-param storageConnectionString string
-@secure()
-param claudeCodeOauthToken string
-@secure()
-param callbackHeaders string
+param allowedIp string
+param environmentStaticIp string
+
+type SecretPair = {
+  name: string
+  uri: string
+}
+
+param secrets SecretPair[]
+
 param existingBuildHash string?
 param existingBuildTime string?
 
@@ -50,6 +52,18 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
             latestRevision: true
           }
         ]
+        ipSecurityRestrictions: [
+          {
+            name: 'allow-owner'
+            ipAddressRange: allowedIp
+            action: 'Allow'
+          }
+          {
+            name: 'allow-environment'
+            ipAddressRange: '${environmentStaticIp}/32'
+            action: 'Allow'
+          }
+        ]
       }
       registries: [
         {
@@ -57,24 +71,11 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
           identity: uamiId
         }
       ]
-      secrets: [
-        {
-          name: 'azurewebjobsstorage'
-          value: storageConnectionString
-        }
-        {
-          name: 'appinsightsconnectionstring'
-          value: insightsConnectionString
-        }
-        {
-          name: 'claudecodeoauthtoken'
-          value: claudeCodeOauthToken
-        }
-        {
-          name: 'callbackheaders'
-          value: callbackHeaders
-        }
-      ]
+      secrets: [for secret in secrets: {
+        name: secret.name
+        keyVaultUrl: secret.uri
+        identity: uamiId
+      }]
     }
     template: {
       containers: [
@@ -175,4 +176,3 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
 }
 
 output name string = app.name
-output fqdn string = app.properties.configuration.ingress.fqdn

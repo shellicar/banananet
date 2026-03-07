@@ -7,7 +7,7 @@ import { audit, sandboxConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const body = CompactRequestSchema.parse(await parseJsonBody(request));
+    const body = CompactRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     const result = await compactSession(audit, sandboxConfig, body.resumeSessionAt);
     return {
       jsonBody: { result } satisfies CompactResponse,

@@ -31,7 +31,7 @@ export async function executeQuery(audit: AuditWriter, endpoint: string, prompt:
       }
       if (msg.type === 'system' && msg.subtype === 'init') {
         logger.info(`SDK init: session=${msg.session_id} model=${msg.model} permissionMode=${msg.permissionMode} tools=${msg.tools.join(',')}`);
-        onSessionId(UuidSchema.parse(msg.session_id));
+        onSessionId(UuidSchema.parse(msg.session_id, { reportInput: true }));
       }
       if (msg.type === 'tool_use_summary') {
         logger.info(`SDK tool use: ${msg.summary}`);

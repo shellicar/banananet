@@ -7,7 +7,7 @@ import { audit, callbackHeaders, sandboxConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const body = RespondRequestSchema.parse(await parseJsonBody(request));
+    const body = RespondRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
 
     processAndCallback(body, audit, sandboxConfig, callbackHeaders).catch((error) => logger.error(`Unhandled error in background processing: ${error}`));
 

@@ -111,7 +111,7 @@ export class BrainClient {
       const json = await response.json();
       logger.info(`Brain GET ${path} → ${response.status} (${duration}ms)`);
       logger.debug(`Brain GET ${path} response: ${JSON.stringify(json)}`);
-      return schema.parse(json);
+      return schema.parse(json, { reportInput: true });
     });
   }
 
@@ -136,7 +136,7 @@ export class BrainClient {
       const json = await response.json();
       logger.info(`Brain POST ${path} → ${response.status} (${duration}ms)`);
       logger.debug(`Brain POST ${path} response: ${JSON.stringify(json)}`);
-      return schema.parse(json);
+      return schema.parse(json, { reportInput: true });
     });
   }
 }

@@ -30,7 +30,7 @@ const main = async () => {
   const dockerBuildHash = process.env.BANANABOT_BUILD_HASH;
   logger.info(`Starting brain v${versionInfo.version} (${versionInfo.shortSha}) built ${versionInfo.buildDate} | docker: ${dockerBuildHash} built ${dockerBuildTime}`);
 
-  const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env);
+  const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
 
   initSessionPaths(CLAUDE_CONFIG_DIR);
   const audit = new AuditWriter(AUDIT_DIR);
@@ -83,7 +83,7 @@ const main = async () => {
 
   app.post('/session', async (c) => {
     try {
-      const { sessionId } = SessionSetRequestSchema.parse(await c.req.json());
+      const { sessionId } = SessionSetRequestSchema.parse(await c.req.json(), { reportInput: true });
       setSessionId(sessionId);
       return c.json({ sessionId } satisfies SessionResponse);
     } catch (error) {
@@ -102,7 +102,7 @@ const main = async () => {
 
   app.post('/respond', async (c) => {
     try {
-      const body = RespondRequestSchema.parse(await c.req.json());
+      const body = RespondRequestSchema.parse(await c.req.json(), { reportInput: true });
 
       processAndCallback(body, audit, sandboxConfig, CALLBACK_HEADERS).catch((error) => {
         logger.error(`Unhandled error in background processing: ${error}`);
@@ -116,7 +116,7 @@ const main = async () => {
 
   app.post('/unprompted', async (c) => {
     try {
-      const body = UnpromptedRequestSchema.parse(await c.req.json());
+      const body = UnpromptedRequestSchema.parse(await c.req.json(), { reportInput: true });
       const { replies, spoke } = await sendUnprompted(audit, body, sandboxConfig);
       return c.json({ replies, spoke } satisfies UnpromptedResponse);
     } catch (error) {
@@ -126,7 +126,7 @@ const main = async () => {
 
   app.post('/direct', async (c) => {
     try {
-      const body = DirectRequestSchema.parse(await c.req.json());
+      const body = DirectRequestSchema.parse(await c.req.json(), { reportInput: true });
       const result = await directQuery(audit, body, sandboxConfig);
       return c.json({ result } satisfies DirectResponse);
     } catch (error) {
@@ -136,7 +136,7 @@ const main = async () => {
 
   app.post('/compact', async (c) => {
     try {
-      const body = CompactRequestSchema.parse(await c.req.json());
+      const body = CompactRequestSchema.parse(await c.req.json(), { reportInput: true });
       const result = await compactSession(audit, sandboxConfig, body.resumeSessionAt);
       return c.json({ result } satisfies CompactResponse);
     } catch (error) {
@@ -146,7 +146,7 @@ const main = async () => {
 
   app.post('/reset', async (c) => {
     try {
-      const body = ResetRequestSchema.parse(await c.req.json());
+      const body = ResetRequestSchema.parse(await c.req.json(), { reportInput: true });
       const result = await resetSession(audit, body, sandboxConfig);
       return c.json({ result } satisfies ResetResponse);
     } catch (error) {

@@ -7,7 +7,7 @@ import { audit, sandboxConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const body = ResetRequestSchema.parse(await parseJsonBody(request));
+    const body = ResetRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     const result = await resetSession(audit, body, sandboxConfig);
     return {
       jsonBody: { result } satisfies ResetResponse,

@@ -20,6 +20,7 @@ param discordGuild string
 param botAliases string
 @secure()
 param callbackHeaders string
+param allowedIp string
 
 @maxLength(3)
 param org string = 'sgh'
@@ -118,6 +119,81 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     enableRbacAuthorization: true
   }
+
+  resource claudeOauth 'secrets' = {
+    name: 'claude-code-oauth-token'
+    properties: {
+      value: claudeCodeOauthToken
+    }
+  }
+
+  resource callbackHeadersSecret 'secrets' = {
+    name: 'callback-headers'
+    properties: {
+      value: callbackHeaders
+    }
+  }
+
+  resource discordTokenSecret 'secrets' = {
+    name: 'discord-token'
+    properties: {
+      value: discordToken
+    }
+  }
+
+  resource brainKeySecret 'secrets' = {
+    name: 'brain-key'
+    properties: {
+      value: brainKey
+    }
+  }
+
+  resource storageConnection 'secrets' = {
+    name: 'azure-webjobs-storage'
+    properties: {
+      value: 'DefaultEndpointsProtocol=https;AccountName=${brainStorageRef.name};AccountKey=${brainStorageRef.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+    }
+  }
+
+  resource brainInsightsSecret 'secrets' = {
+    name: 'app-insights-brain'
+    properties: {
+      value: brainInsights.outputs.connectionString
+    }
+  }
+
+  resource earsInsightsSecret 'secrets' = {
+    name: 'app-insights-ears'
+    properties: {
+      value: earsInsights.outputs.connectionString
+    }
+  }
+}
+
+// Key Vault Secrets User role
+resource kvSecretsUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: '4633458b-17de-408a-b874-0445c86b69e6'
+  scope: subscription()
+}
+
+resource brainKvAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kv.id, brainUami.id, kvSecretsUserRole.id)
+  scope: kv
+  properties: {
+    roleDefinitionId: kvSecretsUserRole.id
+    principalId: brainUami.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource earsKvAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kv.id, earsUami.id, kvSecretsUserRole.id)
+  scope: kv
+  properties: {
+    roleDefinitionId: kvSecretsUserRole.id
+    principalId: earsUami.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -209,10 +285,14 @@ module brainApp 'modules/container-app-brain.bicep' = {
     defaultImageName: brainImageName
     defaultImageTag: brainImageTag
     uamiId: brainUami.id
-    insightsConnectionString: brainInsights.outputs.connectionString
-    storageConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${brainStorageRef.name};AccountKey=${brainStorageRef.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-    claudeCodeOauthToken: claudeCodeOauthToken
-    callbackHeaders: callbackHeaders
+    allowedIp: allowedIp
+    environmentStaticIp: containerEnv.outputs.staticIp
+    secrets: [
+      { name: 'azurewebjobsstorage', uri: kv::storageConnection.properties.secretUriWithVersion }
+      { name: 'appinsightsconnectionstring', uri: kv::brainInsightsSecret.properties.secretUriWithVersion }
+      { name: 'claudecodeoauthtoken', uri: kv::claudeOauth.properties.secretUriWithVersion }
+      { name: 'callbackheaders', uri: kv::callbackHeadersSecret.properties.secretUriWithVersion }
+    ]
     existingBuildHash: existingBuildHash
     existingBuildTime: existingBuildTime
   }
@@ -280,14 +360,18 @@ module earsApp 'modules/container-app-ears.bicep' = {
     defaultImageName: earsImageName
     defaultImageTag: earsImageTag
     uamiId: earsUami.id
-    insightsConnectionString: earsInsights.outputs.connectionString
-    discordToken: discordToken
+    allowedIp: allowedIp
+    environmentStaticIp: containerEnv.outputs.staticIp
+    secrets: [
+      { name: 'appinsightsconnectionstring', uri: kv::earsInsightsSecret.properties.secretUriWithVersion }
+      { name: 'discordtoken', uri: kv::discordTokenSecret.properties.secretUriWithVersion }
+      { name: 'brainkey', uri: kv::brainKeySecret.properties.secretUriWithVersion }
+    ]
     discordGuild: discordGuild
-    brainUrl: 'https://${brainApp.outputs.fqdn}/api'
-    brainKey: brainKey
+    brainUrl: 'https://${brainAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
     sandboxEnabled: 'true'
     botAliases: botAliases
-    callbackHost: 'https://${earsAppName}.${containerEnv.outputs.defaultDomain}'
+    callbackHost: 'https://${earsAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
   }
 }
 
@@ -308,15 +392,3 @@ module earsAssignment 'modules/assignment-insights.bicep' = {
     insightsName: earsInsightsName
   }
 }
-
-// ──────────────────────────────────────────────
-// Outputs
-// ──────────────────────────────────────────────
-
-output brainAppName string = brainApp.outputs.name
-output brainAppUrl string = 'https://${brainApp.outputs.fqdn}'
-output brainStorageName string = brainStorage.outputs.name
-output brainUamiClientId string = brainUami.properties.clientId
-output earsAppName string = earsApp.outputs.name
-output earsUamiClientId string = earsUami.properties.clientId
-output kvName string = kv.name

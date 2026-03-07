@@ -6,24 +6,31 @@
 
 set -e
 
-CONTAINER_APP="sgh-ca-aue-dev-banananet-01"
-RESOURCE_GROUP="sgh-rg-aue-dev-banananet-01"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/common.sh"
 
-REVISION=$(az containerapp revision list \
-  -n "${CONTAINER_APP}" \
-  -g "${RESOURCE_GROUP}" \
-  --query "[?properties.active].name | [0]" \
-  -o tsv)
+restart_app() {
+  _app="$1"
 
-if [ -z "$REVISION" ]; then
-  echo "No active revision found" >&2
-  exit 1
-fi
+  _revision=$(az containerapp revision list \
+    -n "${_app}" \
+    -g "${RESOURCE_GROUP}" \
+    --query "[?properties.active].name | [0]" \
+    -o tsv)
 
-echo "Restarting revision: ${REVISION}"
-az containerapp revision restart \
-  -n "${CONTAINER_APP}" \
-  -g "${RESOURCE_GROUP}" \
-  --revision "${REVISION}"
+  if [ -z "$_revision" ]; then
+    echo "No active revision found for ${_app}" >&2
+    return 1
+  fi
 
-echo "Restart triggered: ${REVISION}"
+  echo "Restarting ${_app} revision: ${_revision}"
+  az containerapp revision restart \
+    -n "${_app}" \
+    -g "${RESOURCE_GROUP}" \
+    --revision "${_revision}"
+
+  echo "Restart triggered: ${_revision}"
+}
+
+restart_app "${BRAIN_APP}"
+restart_app "${EARS_APP}"

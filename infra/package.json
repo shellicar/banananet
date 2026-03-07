@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "deploy:dev": "dotenvx run -f ../.env -- az deployment group create --subscription 383d501b-3906-496b-ac90-e336189d628f --resource-group sgh-rg-aue-dev-banananet-01 --template-file main.bicep --parameters main.bicepparam",
+    "deploy:dev": "dotenvx run -f ../.env -- az deployment group create --name \"main-$(date -u +%y%m%d-%H%M)\" --subscription 383d501b-3906-496b-ac90-e336189d628f --resource-group sgh-rg-aue-dev-banananet-01 --template-file main.bicep --parameters main.bicepparam",
     "verify": "az bicep build --file main.bicep --stdout > /dev/null",
     "deploy:acr": "az deployment group create --subscription 383d501b-3906-496b-ac90-e336189d628f --resource-group CentralRG --template-file modules/container-registry.bicep --parameters registryName=sghacraue01 location=australiaeast"
   },

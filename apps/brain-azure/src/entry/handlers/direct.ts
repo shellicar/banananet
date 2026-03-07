@@ -7,7 +7,7 @@ import { audit, sandboxConfig } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const body = DirectRequestSchema.parse(await parseJsonBody(request));
+    const body = DirectRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     const result = await directQuery(audit, body, sandboxConfig);
     return {
       jsonBody: { result } satisfies DirectResponse,

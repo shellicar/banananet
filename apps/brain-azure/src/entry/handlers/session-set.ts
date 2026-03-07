@@ -6,7 +6,7 @@ import { handleError, parseJsonBody } from '../../shared/handleError';
 
 export const handler: HttpHandler = async (request) => {
   try {
-    const { sessionId } = SessionSetRequestSchema.parse(await parseJsonBody(request));
+    const { sessionId } = SessionSetRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     setSessionId(sessionId);
     return {
       jsonBody: { sessionId } satisfies SessionResponse,

@@ -50,8 +50,8 @@ if [ "$NO_DEPLOY" = 1 ]; then
 fi
 
 # Deploy
-deploy_image sgh-ca-aue-dev-bnn-brn-01 "${IMAGE_REF_banananet_brain}"
-deploy_image sgh-ca-aue-dev-bnn-ear-01 "${IMAGE_REF_banananet_ears}"
+deploy_image "${BRAIN_APP}" "${IMAGE_REF_banananet_brain}"
+deploy_image "${EARS_APP}" "${IMAGE_REF_banananet_ears}"
 
 echo ""
 echo "✅ Deploy complete"
