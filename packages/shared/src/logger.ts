@@ -4,7 +4,7 @@ import { Version } from './version';
 
 applicationinsights.setup().start();
 
-const client = applicationinsights.defaultClient;
+export const client = applicationinsights.defaultClient;
 client.context.tags[client.context.keys.applicationVersion] = Version.version;
 
 export const logger = createWinstonLogger({

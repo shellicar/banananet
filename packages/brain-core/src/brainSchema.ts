@@ -2,7 +2,19 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 
+const inputNumberSchema = z
+  .string()
+  .transform((val) => {
+    const trimmed = val.trim();
+    if (trimmed === '' || Number.isNaN(Number(trimmed))) {
+      return val;
+    }
+    return Number(trimmed);
+  })
+  .pipe(z.number().int().min(1));
+
 export const brainSchema = z.object({
+  CONTAINER_APP_PORT: inputNumberSchema,
   CLAUDE_CONFIG_DIR: z.string().default(join(homedir(), '.claude')),
   CLAUDE_SDK_CWD: z
     .string()

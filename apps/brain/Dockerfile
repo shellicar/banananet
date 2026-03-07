@@ -3,7 +3,7 @@ FROM node:22-slim AS base
 
 # Install sandbox dependencies and tools
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bubblewrap libicu-dev socat curl git ca-certificates gpg gpg-agent jq python3 python3-pip python3-venv openssh-client \
+  && apt-get install -y --no-install-recommends tini libicu-dev socat curl git ca-certificates gpg gpg-agent jq python3 python3-pip python3-venv openssh-client \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -25,14 +25,14 @@ RUN corepack enable pnpm
 # Create non-root user matching host uid for volume permissions
 RUN useradd -m -s /bin/bash -u 1000 -o bot
 
-# Stage 2: Install runtime dependencies (cached when package files unchanged)
-FROM base AS deps
-WORKDIR /app
-COPY --chmod=750 package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --chmod=750 apps/brain/package.json apps/brain/package.json
-COPY --chmod=750 packages/brain-core/package.json packages/brain-core/package.json
-COPY --chmod=750 packages/shared/package.json packages/shared/package.json
-RUN pnpm install --prod --frozen-lockfile --filter=@simple-claude-bot/brain...
+# Stage 2: Install runtime dependencies (flat, no symlinks — required for claude-sandbox readlink)
+FROM node:22-slim AS deps
+RUN corepack enable pnpm
+RUN mkdir /tmp/deps
+WORKDIR /tmp/deps
+RUN pnpm init
+COPY apps/brain/package.json /tmp/source.json
+RUN pnpm add $(node -e "for(const[k,v]of Object.entries(require('/tmp/source.json').dependencies))process.stdout.write(k+'@'+v+' ')")
 
 # Stage 3: Final image
 FROM base
@@ -40,11 +40,7 @@ FROM base
 WORKDIR /app
 
 # Copy node_modules from deps stage
-COPY --from=deps /app/ /app/
-RUN chmod o+x /app /app/apps /app/apps/brain \
-  && chmod -R o+rX /app/node_modules
-
-WORKDIR /app/apps/brain
+COPY --from=deps --chmod=755 /tmp/deps/node_modules node_modules/
 
 # Copy built output (esbuild bundle is self-contained)
 COPY --chmod=750 apps/brain/dist/ dist/
@@ -63,8 +59,8 @@ ENV CLAUDE_PATH=/usr/local/bin/claude-sandbox
 ENV CLAUDE_CONFIG_DIR=/home/bot/.claude
 ENV WORKSPACE_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"
 
-HEALTHCHECK --interval=5s --timeout=5s --retries=10 --start-period=5s \
-  CMD curl -f http://localhost:3000/health || exit 1
+# Verify claude-code CLI is resolvable (fails build if node_modules are broken)
+RUN readlink -e /app/node_modules/@anthropic-ai/claude-code/cli.js
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint.sh"]
 CMD ["node", "dist/brain.js"]

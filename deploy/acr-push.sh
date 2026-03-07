@@ -28,7 +28,7 @@ echo "📦 Building packages..."
 pnpm build
 
 # Build
-build_image banananet-brain apps/brain-azure/Dockerfile
+build_image banananet-brain apps/brain/Dockerfile
 build_image banananet-ears apps/ears/Dockerfile
 
 if [ "$BUILD_ONLY" = 1 ]; then

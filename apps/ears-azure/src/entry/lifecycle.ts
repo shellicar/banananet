@@ -1,22 +1,18 @@
 import { app } from '@azure/functions';
-import { logger } from '@simple-claude-bot/shared/logger';
+import { client, logger } from '@simple-claude-bot/shared/logger';
 import { shutdownController } from '../shared/startup';
 
 logger.info('lifecycle: module loaded, registering hooks and signal handlers');
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 app.hook.appStart(() => {
   logger.info('appStart hook fired');
 });
 
-app.hook.appTerminate(() => {
+app.hook.appTerminate(async () => {
   logger.info('appTerminate hook fired');
   shutdownController.abort();
+  client.flush();
+  await delay(5000);
 });
-
-for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-  process.on(signal, () => {
-    logger.info(`Received ${signal}, shutting down...`);
-    shutdownController.abort();
-    process.exit(0);
-  });
-}

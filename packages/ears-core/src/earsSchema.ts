@@ -24,7 +24,7 @@ export const earsSchema = z.object({
         .filter(Boolean),
     )
     .default([]),
-  BRAIN_URL: z.string().min(1).default('http://brain:3000'),
+  BRAIN_URL: z.string().min(1).default('http://brain/api'),
   BRAIN_KEY: z.string().min(1).optional(),
   WORKSPACE_ENABLED: z
     .string()

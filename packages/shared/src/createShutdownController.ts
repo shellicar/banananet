@@ -1,4 +1,4 @@
-import { logger } from './logger';
+import { client, logger } from './logger';
 
 export interface ShutdownOptions {
   readonly delayBeforeAbort: number;
@@ -20,15 +20,16 @@ export const createShutdownController = (options: ShutdownOptions): ShutdownCont
       return;
     }
     shuttingDown = true;
+    client.flush();
 
-    logger.warn(`Received ${signal}, starting graceful shutdown (abort in ${options.delayBeforeAbort / 1000}s, force exit in ${(options.delayBeforeAbort + options.gracePeriod) / 1000}s)`);
+    logger.warn(`Received ${signal}, starting graceful shutdown`, { component: 'lifecycle', delayBeforeAbort: options.delayBeforeAbort / 1000, gracePeriod: options.gracePeriod / 1000 });
 
     setTimeout(() => {
-      logger.warn('Delay expired, aborting in-flight queries');
+      logger.warn('Delay expired, aborting in-flight queries', { component: 'lifecycle' });
       controller.abort();
 
       setTimeout(() => {
-        logger.error('Grace period expired, forcing exit');
+        logger.error('Grace period expired, forcing exit', { component: 'lifecycle' });
         process.exit(1);
       }, options.gracePeriod).unref();
     }, options.delayBeforeAbort).unref();
