@@ -1,14 +1,14 @@
+import { BotCapability } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { AuditWriter } from '../audit/auditLog';
 import { buildQueryOptions } from '../buildQueryOptions';
 import { executeQuery } from '../executeQuery';
-import type { SandboxConfig } from '../types';
+import type { SdkConfig } from '../types';
 
-export async function pingSDK(audit: AuditWriter, sandboxConfig: SandboxConfig): Promise<string> {
+export async function pingSDK(audit: AuditWriter, sdkConfig: SdkConfig): Promise<string> {
   const options = buildQueryOptions({
     systemPrompt: 'Respond with exactly: pong',
-    allowedTools: [],
-    maxTurns: 1,
-    sandboxConfig,
+    capabilities: { [BotCapability.Web]: false, [BotCapability.Workspace]: false },
+    sdkConfig,
   });
 
   return executeQuery(audit, '/ping', 'ping', options, () => {});

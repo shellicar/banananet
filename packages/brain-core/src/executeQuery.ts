@@ -12,13 +12,15 @@ import { hasSubType } from './hasSubType';
 import { SdkResult } from './sdk/SdkResult';
 
 export async function executeQuery(audit: AuditWriter, endpoint: string, prompt: string | AsyncIterable<SDKUserMessage>, options: Options, onSessionId: (id: UUID) => void): Promise<string> {
+  logger.info(`executeQuery: starting ${endpoint}`);
   const startTime = Date.now();
   const timer = setInterval(() => {
     const elapsed = Math.round((Date.now() - startTime) / 1000);
     logger.debug(`Still waiting after ${elapsed}s...`);
   }, 5000);
 
-  logger.debug(`Query options: ${JSON.stringify(options, undefined, 2)}`);
+  const { canUseTool, stderr, ...logOptions } = options;
+  logger.debug('Query options', logOptions);
 
   let result = '';
   try {
@@ -100,7 +102,7 @@ export async function executeQuery(audit: AuditWriter, endpoint: string, prompt:
   }
 
   const elapsed = Math.round((Date.now() - startTime) / 1000);
-  logger.info(`Response (${elapsed}s): ${result}`);
+  logger.info(`executeQuery: ${endpoint} complete in ${elapsed}s`);
 
   return result;
 }

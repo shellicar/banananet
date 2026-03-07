@@ -7,9 +7,9 @@ import { claudePath, model } from './consts';
 import { executeQuery } from './executeQuery';
 import { claudeGlobals } from './globals';
 import { saveSession } from './session/saveSession';
-import type { SandboxConfig } from './types';
+import type { SdkConfig } from './types';
 
-export async function compactSession(audit: AuditWriter, sandboxConfig: SandboxConfig, resumeSessionAt?: UUID): Promise<string> {
+export async function compactSession(audit: AuditWriter, sdkConfig: SdkConfig, resumeSessionAt?: UUID): Promise<string> {
   if (!claudeGlobals.sessionId) {
     logger.warn('No session to compact');
     return 'No session to compact';
@@ -20,7 +20,7 @@ export async function compactSession(audit: AuditWriter, sandboxConfig: SandboxC
   const options = {
     pathToClaudeCodeExecutable: claudePath,
     model,
-    cwd: sandboxConfig.directory,
+    cwd: sdkConfig.cwd,
     allowedTools: [] as string[],
     maxTurns: 1,
     resume: claudeGlobals.sessionId,

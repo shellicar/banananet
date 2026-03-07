@@ -1,3 +1,4 @@
+# Stage 1: System dependencies (cached when apt packages unchanged)
 FROM node:22-slim AS base
 
 # Install sandbox dependencies and tools
@@ -24,20 +25,22 @@ RUN corepack enable pnpm
 # Create non-root user matching host uid for volume permissions
 RUN useradd -m -s /bin/bash -u 1000 -o bot
 
-FROM node:22-slim
-
-COPY --from=base / /
-
+# Stage 2: Install runtime dependencies (cached when package files unchanged)
+FROM base AS deps
 WORKDIR /app
-
-# Install runtime dependencies (claude-agent-sdk is external, claude-code is a subprocess)
 COPY --chmod=750 package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --chmod=750 apps/brain/package.json apps/brain/package.json
 COPY --chmod=750 packages/brain-core/package.json packages/brain-core/package.json
 COPY --chmod=750 packages/shared/package.json packages/shared/package.json
 RUN pnpm install --prod --frozen-lockfile --filter=@simple-claude-bot/brain...
 
-# Set node_modules permissions before dist (rarely changes, stays cached)
+# Stage 3: Final image
+FROM base
+
+WORKDIR /app
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/ /app/
 RUN chmod o+x /app /app/apps /app/apps/brain \
   && chmod -R o+rX /app/node_modules
 
@@ -55,11 +58,10 @@ COPY --chmod=755 scripts/claude-sandbox.sh /usr/local/bin/claude-sandbox
 COPY --chmod=755 scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV TZ=Australia/Melbourne
-ENV SANDBOX_DIR=/sandbox
-ENV SANDBOX_ENABLED=true
+ENV CLAUDE_SDK_CWD=/sandbox
 ENV CLAUDE_PATH=/usr/local/bin/claude-sandbox
 ENV CLAUDE_CONFIG_DIR=/home/bot/.claude
-ENV SANDBOX_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"
+ENV WORKSPACE_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"
 
 HEALTHCHECK --interval=5s --timeout=5s --retries=10 --start-period=5s \
   CMD curl -f http://localhost:3000/health || exit 1

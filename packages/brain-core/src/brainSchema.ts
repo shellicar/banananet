@@ -1,15 +1,25 @@
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { z } from 'zod';
 
 export const brainSchema = z.object({
   CLAUDE_CONFIG_DIR: z.string().default(join(homedir(), '.claude')),
-  SANDBOX_ENABLED: z
+  CLAUDE_SDK_CWD: z
     .string()
-    .transform((val) => val === 'true')
-    .default(false),
-  SANDBOX_DIR: z.string().default('./sandbox'),
-  SANDBOX_COMMANDS: z.string().default(''),
+    .transform((x) => resolve(x))
+    .default('./sandbox'),
+  CLAUDE_SDK_DEFAULT_MAXTURNS: z.coerce.number().int().positive().default(1),
+  CLAUDE_SDK_WORKSPACE_MAXTURNS: z.coerce.number().int().positive().default(25),
+  BOT_ALIASES: z
+    .string()
+    .transform((val) =>
+      val
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean),
+    )
+    .default([]),
+  WORKSPACE_COMMANDS: z.string().default(''),
   AUDIT_DIR: z.string().default('/audit'),
   CALLBACK_HEADERS: z
     .string()

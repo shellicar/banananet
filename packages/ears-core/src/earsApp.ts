@@ -1,4 +1,5 @@
 import { logger } from '@simple-claude-bot/shared/logger';
+import { BotCapability } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { z } from 'zod';
 import { BrainClient } from './brainClient';
 import { CallbackManager, type CallbackResult } from './callbackManager';
@@ -7,7 +8,6 @@ import { dispatchReplies } from './dispatchReplies';
 import type { earsSchema } from './earsSchema';
 import { startDiscord } from './platform/discord/startDiscord';
 import type { PlatformChannel } from './platform/types';
-import { buildSystemPrompt } from './systemPrompts';
 import type { PlatformMessageInput } from './types';
 import { resetActivity, seedActivity, startWorkPlay, stopWorkPlay, triggerWorkPlay } from './workplay';
 
@@ -26,7 +26,8 @@ export function createEarsApp(config: EarsConfig, signal: AbortSignal): EarsApp 
   let processing: Promise<void> | undefined;
   const messageQueue: PlatformMessageInput[] = [];
   let platformChannel: PlatformChannel | undefined;
-  let systemPrompt = buildSystemPrompt({ type: 'discord', sandbox: config.SANDBOX_ENABLED, sandboxCommands: config.SANDBOX_COMMANDS, botAliases: config.BOT_ALIASES });
+  let botUserId: string | undefined;
+  let botUsername: string | undefined;
 
   const processQueue = async (channel: PlatformChannel) => {
     while (messageQueue.length > 0) {
@@ -39,7 +40,7 @@ export function createEarsApp(config: EarsConfig, signal: AbortSignal): EarsApp 
       const { callbackUrl, requestId, completed } = callbackManager.createCallback(channel, batch);
       logger.info(`Created callback: ${callbackUrl}`);
       try {
-        await brain.respondAsync({ messages: batch, systemPrompt, allowedTools: ['WebSearch', 'WebFetch'], callbackUrl });
+        await brain.respondAsync({ messages: batch, capabilities: { [BotCapability.Workspace]: config.WORKSPACE_ENABLED }, callbackUrl, botUserId, botUsername });
         const healthKeepAlive = setInterval(() => {
           brain.health().catch((err) => logger.warn(`Health keepalive failed: ${err}`));
         }, 60_000);
@@ -57,16 +58,16 @@ export function createEarsApp(config: EarsConfig, signal: AbortSignal): EarsApp 
 
   const handle = startDiscord({ guildId: config.DISCORD_GUILD, channelName: config.CLAUDE_CHANNEL }, config.DISCORD_TOKEN, {
     onReady: (info) => {
-      systemPrompt = buildSystemPrompt({ type: 'discord', sandbox: config.SANDBOX_ENABLED, sandboxCommands: config.SANDBOX_COMMANDS, botUserId: info.botUserId, botUsername: info.botUsername, botAliases: config.BOT_ALIASES });
-      logger.debug(`System prompt: ${systemPrompt}`);
+      botUserId = info.botUserId;
+      botUsername = info.botUsername;
       platformChannel = info.channel;
       if (info.lastMessageTimestamp) {
         seedActivity(info.lastMessageTimestamp);
       }
       startWorkPlay({
-        sandboxEnabled: config.SANDBOX_ENABLED,
-        onIdle: async (prompt, options) => {
-          const response = await brain.unprompted({ prompt, systemPrompt, allowedTools: options.allowedTools, maxTurns: options.maxTurns });
+        workspaceEnabled: config.WORKSPACE_ENABLED,
+        onIdle: async (options) => {
+          const response = await brain.unprompted({ trigger: 'workplay', capabilities: options.capabilities, botUserId, botUsername });
           if (response.spoke && response.replies.length > 0 && platformChannel) {
             await dispatchReplies(platformChannel, response.replies);
           }
@@ -114,7 +115,8 @@ export function createEarsApp(config: EarsConfig, signal: AbortSignal): EarsApp 
       });
     },
     getPlatformChannel: () => platformChannel,
-    getSystemPrompt: () => systemPrompt,
+    getBotUserId: () => botUserId,
+    getBotUsername: () => botUsername,
   } satisfies CommandContext;
 
   return {

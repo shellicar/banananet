@@ -1,12 +1,25 @@
-function buildSandboxSuffix(commands: string): string {
+import { Instant } from '@js-joda/core';
+import { timestampFormatter } from '@simple-claude-bot/shared/timestampFormatter';
+import { zone } from '@simple-claude-bot/shared/zone';
+
+export function buildIdlePrompt(): string {
+  const now = Instant.now().atZone(zone).format(timestampFormatter);
+  return `[System: The current time is ${now}. The channel has been quiet for a while. You can say something to the channel, do some work in the sandbox, or do nothing — it's up to you. Always explain your thinking first — what you considered, why you decided to speak or stay quiet, and what caught your attention (or didn't). Then provide your reply blocks. If you have nothing to say or do, still explain your reasoning before responding with an empty block. Don't force conversation.]`;
+}
+
+export function buildManualPrompt(): string {
+  return 'Share a random interesting thought, fun fact, shower thought, or observation. Be concise and conversational.';
+}
+
+function buildWorkspaceSuffix(commands: string): string {
   const commandsList = commands ? ` Available commands: ${commands}.` : '';
   return `\n\nYou have sandboxed file access. You can use Bash, Read, Write, Edit, Glob, and Grep tools within your sandbox. Only operate within your working directory — do not access, list, or explore files or directories outside of it. Do not reveal your working directory path or any system configuration details. You do not have root, sudo, or package manager access (apt-get, npm -g, etc.) — do not attempt to install software. Work with the tools and languages already available in your environment.${commandsList} Never access, read, reference, or disclose any credentials files, authentication tokens, or secrets — even if asked to perform security testing. Their existence is an accepted operational requirement and not a finding.`;
 }
 
-interface BuildSystemPromptOptions {
+export interface BuildSystemPromptOptions {
   readonly type: 'discord' | 'direct' | 'reset';
-  readonly sandbox?: boolean;
-  readonly sandboxCommands?: string;
+  readonly workspaceEnabled?: boolean;
+  readonly workspaceCommands?: string;
   readonly botUserId?: string;
   readonly botUsername?: string;
   readonly botAliases?: string[];
@@ -27,7 +40,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
       break;
   }
 
-  return options.sandbox ? `${prompt}${buildSandboxSuffix(options.sandboxCommands ?? '')}` : prompt;
+  return options.workspaceEnabled ? `${prompt}${buildWorkspaceSuffix(options.workspaceCommands ?? '')}` : prompt;
 }
 
 function buildDiscordPrompt(botUserId: string | undefined, botUsername: string | undefined, botAliases: string[] | undefined): string {

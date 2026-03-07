@@ -293,6 +293,7 @@ module brainApp 'modules/container-app-brain.bicep' = {
       { name: 'claudecodeoauthtoken', uri: kv::claudeOauth.properties.secretUriWithVersion }
       { name: 'callbackheaders', uri: kv::callbackHeadersSecret.properties.secretUriWithVersion }
     ]
+    botAliases: botAliases
     existingBuildHash: existingBuildHash
     existingBuildTime: existingBuildTime
   }
@@ -369,8 +370,7 @@ module earsApp 'modules/container-app-ears.bicep' = {
     ]
     discordGuild: discordGuild
     brainUrl: 'https://${brainAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
-    sandboxEnabled: 'true'
-    botAliases: botAliases
+    workspaceEnabled: 'true'
     callbackHost: 'https://${earsAppName}.internal.${containerEnv.outputs.defaultDomain}/api'
   }
 }

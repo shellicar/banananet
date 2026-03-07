@@ -1,4 +1,4 @@
-# Stage 1: Install runtime dependencies (cached separately — these rarely change)
+# Stage 1: Install runtime dependencies (cached when package files unchanged)
 FROM node:22-slim AS deps
 RUN corepack enable pnpm
 RUN mkdir /tmp/deps
@@ -7,13 +7,8 @@ RUN pnpm init
 COPY apps/brain-azure/package.json /tmp/source.json
 RUN pnpm add $(node -e "for(const[k,v]of Object.entries(require('/tmp/source.json').dependencies))process.stdout.write(k+'@'+v+' ')")
 
-# Stage 2: Main image
-FROM mcr.microsoft.com/azure-functions/node:4-node22
-
-ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
-    AzureFunctionsJobHost__Logging__Console__IsEnabled=true \
-    TZ=Australia/Melbourne \
-    SANDBOX_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"
+# Stage 2: System dependencies (cached when apt packages unchanged)
+FROM mcr.microsoft.com/azure-functions/node:4-node22 AS base
 
 # Install sandbox tools
 RUN apt-get update \
@@ -39,32 +34,35 @@ RUN corepack enable pnpm
 # Create non-root user matching host uid for volume permissions
 RUN useradd -m -s /bin/bash -u 1000 -o bot
 
+# Stage 3: Final image
+FROM base
+
+ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
+    AzureFunctionsJobHost__Logging__Console__IsEnabled=true \
+    TZ=Australia/Melbourne \
+    WORKSPACE_COMMANDS="node, pnpm, git, gh, jq, curl, python3, pip3, bicep, ssh, ssh-keygen"
+
 WORKDIR /home/site/wwwroot
 
-# Copy runtime dependencies from deps stage
-COPY --from=deps /tmp/deps/node_modules node_modules/
-COPY apps/brain-azure/package.json package.json
+# Copy node_modules from deps stage
+COPY --from=deps --chmod=755 /tmp/deps/node_modules node_modules/
+COPY --chmod=750 apps/brain-azure/package.json package.json
 
 # Copy built output and Azure Functions config
 COPY apps/brain-azure/dist/ dist/
 COPY apps/brain-azure/host.json host.json
 
 # Copy Claude settings and hooks to staging (volume mount overlays /home/bot/.claude at runtime)
-COPY claude-home/ /opt/claude-home/
+COPY --chmod=750 claude-home/ /opt/claude-home/
+RUN chmod +x /opt/claude-home/hooks/*.sh
 
 # Copy scripts
-COPY scripts/claude-sandbox-azure.sh /usr/local/bin/claude-sandbox
-COPY scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chmod=755 scripts/claude-sandbox-azure.sh /usr/local/bin/claude-sandbox
+COPY --chmod=755 scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Lock down app files and set permissions
-RUN chmod -R 750 /home/site/wwwroot \
-  && chmod o+x /home/site/wwwroot \
-  && chmod -R o+rX /home/site/wwwroot/node_modules \
-  && chmod +x /opt/claude-home/hooks/*.sh \
-  && chmod +x /usr/local/bin/claude-sandbox \
-  && chmod +x /usr/local/bin/entrypoint.sh
-
-ENV SANDBOX_DIR=/sandbox \
-    SANDBOX_ENABLED=true \
+ENV CLAUDE_SDK_CWD=/sandbox \
     CLAUDE_PATH=/usr/local/bin/claude-sandbox \
     CLAUDE_CONFIG_DIR=/home/bot/.claude
+
+# Verify claude-code CLI is resolvable (fails build if node_modules are broken)
+RUN readlink -e /home/site/wwwroot/node_modules/@anthropic-ai/claude-code/cli.js

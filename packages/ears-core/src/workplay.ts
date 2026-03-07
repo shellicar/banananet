@@ -1,19 +1,18 @@
 import { Instant } from '@js-joda/core';
 import { logger } from '@simple-claude-bot/shared/logger';
+import { BotCapability } from '@simple-claude-bot/shared/shared/platform/schema';
 import type { Reply } from '@simple-claude-bot/shared/shared/types';
-import { timestampFormatter } from '@simple-claude-bot/shared/timestampFormatter';
 import { zone } from '@simple-claude-bot/shared/zone';
 
 const TICK_INTERVAL_MS = 5 * 60 * 1000;
 const MAX_PROBABILITY = 0.5;
 const PROBABILITY_DIVISOR = 1200;
-const SANDBOX_TOOLS = ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'];
 const QUIET_HOUR_START = 22;
 const QUIET_HOUR_END = 10;
 
 interface WorkPlayConfig {
-  sandboxEnabled: boolean;
-  onIdle: (prompt: string, options: { allowedTools?: string[]; maxTurns?: number }) => Promise<{ replies: Reply[]; spoke: boolean }>;
+  workspaceEnabled: boolean;
+  onIdle: (options: { capabilities?: Partial<Record<BotCapability, boolean>> }) => Promise<{ replies: Reply[]; spoke: boolean }>;
   isProcessing: () => boolean;
   setProcessing: (p: Promise<void>) => void;
   setPresence?: (status: 'online' | 'idle') => void;
@@ -39,11 +38,6 @@ function idleProbability(elapsedMs: number): number {
 function isQuietHours(): boolean {
   const hour = Instant.now().atZone(zone).hour();
   return hour >= QUIET_HOUR_START || hour < QUIET_HOUR_END;
-}
-
-function buildIdlePrompt(): string {
-  const now = Instant.now().atZone(zone).format(timestampFormatter);
-  return `[System: The current time is ${now}. The channel has been quiet for a while. You can say something to the channel, do some work in the sandbox, or do nothing — it's up to you. Always explain your thinking first — what you considered, why you decided to speak or stay quiet, and what caught your attention (or didn't). Then provide your reply blocks. If you have nothing to say or do, still explain your reasoning before responding with an empty block. Don't force conversation.]`;
 }
 
 async function onTick(config: WorkPlayConfig): Promise<void> {
@@ -74,10 +68,9 @@ async function onTick(config: WorkPlayConfig): Promise<void> {
 }
 
 function sendIdlePrompt(config: WorkPlayConfig): void {
-  const prompt = buildIdlePrompt();
-  const sandboxEnabled = config.sandboxEnabled;
+  const capabilities = config.workspaceEnabled ? undefined : { [BotCapability.Web]: false, [BotCapability.Workspace]: false };
 
-  const task = config.onIdle(prompt, { allowedTools: sandboxEnabled ? SANDBOX_TOOLS : [], maxTurns: sandboxEnabled ? 25 : 1 }).then(({ spoke }) => {
+  const task = config.onIdle({ capabilities }).then(({ spoke }) => {
     logger.info(`WorkPlay: idle action complete (spoke=${spoke})`);
   });
 

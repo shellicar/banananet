@@ -3,14 +3,16 @@ import { buildQueryOptions } from './buildQueryOptions';
 import { saveDirectSession } from './direct/saveDirectSession';
 import { executeQuery } from './executeQuery';
 import { claudeGlobals } from './globals';
-import type { DirectRequestOutput, SandboxConfig } from './types';
+import { buildSystemPrompt } from './systemPrompts';
+import type { DirectRequestOutput, SdkConfig } from './types';
 
-export async function directQuery(audit: AuditWriter, body: DirectRequestOutput, sandboxConfig: SandboxConfig): Promise<string> {
+export async function directQuery(audit: AuditWriter, body: DirectRequestOutput, sdkConfig: SdkConfig): Promise<string> {
+  const systemPrompt = buildSystemPrompt({ type: 'direct' });
+
   const options = buildQueryOptions({
-    systemPrompt: body.systemPrompt,
-    allowedTools: body.allowedTools,
-    maxTurns: 25,
-    sandboxConfig,
+    systemPrompt,
+    capabilities: body.capabilities,
+    sdkConfig,
     sessionId: claudeGlobals.directSessionId,
   });
 

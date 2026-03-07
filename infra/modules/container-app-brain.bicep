@@ -18,6 +18,7 @@ type SecretPair = {
 
 param secrets SecretPair[]
 
+param botAliases string
 param existingBuildHash string?
 param existingBuildTime string?
 
@@ -112,16 +113,16 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
               value: '/home/bot/.claude'
             }
             {
-              name: 'SANDBOX_ENABLED'
-              value: 'true'
-            }
-            {
-              name: 'SANDBOX_DIR'
+              name: 'CLAUDE_SDK_CWD'
               value: '/sandbox'
             }
             {
               name: 'CALLBACK_HEADERS'
               secretRef: 'callbackheaders'
+            }
+            {
+              name: 'BOT_ALIASES'
+              value: botAliases
             }
             {
               name: 'BANANABOT_BUILD_HASH'

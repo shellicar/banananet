@@ -20,8 +20,7 @@ param secrets SecretPair[]
 
 param discordGuild string
 param brainUrl string
-param sandboxEnabled string
-param botAliases string
+param workspaceEnabled string
 param callbackHost string
 
 var resolvedImage = image ?? '${acrLoginServer}/${defaultImageName}:${defaultImageTag}'
@@ -110,12 +109,8 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
               value: brainUrl
             }
             {
-              name: 'SANDBOX_ENABLED'
-              value: sandboxEnabled
-            }
-            {
-              name: 'BOT_ALIASES'
-              value: botAliases
+              name: 'WORKSPACE_ENABLED'
+              value: workspaceEnabled
             }
             {
               name: 'CALLBACK_HOST'

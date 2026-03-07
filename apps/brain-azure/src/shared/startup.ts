@@ -1,23 +1,25 @@
 import { mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { env } from 'node:process';
 import { AuditWriter } from '@simple-claude-bot/brain-core/audit/auditLog';
 import { brainSchema } from '@simple-claude-bot/brain-core/brainSchema';
 import { initSessionPaths } from '@simple-claude-bot/brain-core/initSessionPaths';
-import type { SandboxConfig } from '@simple-claude-bot/brain-core/types';
+import type { SdkConfig } from '@simple-claude-bot/brain-core/types';
 import { logger } from '@simple-claude-bot/shared/logger';
 
-const { CLAUDE_CONFIG_DIR, SANDBOX_ENABLED, SANDBOX_DIR, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
+const { CLAUDE_CONFIG_DIR, CLAUDE_SDK_CWD, CLAUDE_SDK_DEFAULT_MAXTURNS, CLAUDE_SDK_WORKSPACE_MAXTURNS, BOT_ALIASES, WORKSPACE_COMMANDS, AUDIT_DIR, CALLBACK_HEADERS } = brainSchema.parse(env, { reportInput: true });
 initSessionPaths(CLAUDE_CONFIG_DIR);
 
 export const audit = new AuditWriter(AUDIT_DIR);
 
 export const callbackHeaders = CALLBACK_HEADERS;
 
-export const sandboxConfig = {
-  enabled: SANDBOX_ENABLED,
-  directory: resolve(SANDBOX_DIR),
-} satisfies SandboxConfig;
+export const sdkConfig = {
+  cwd: CLAUDE_SDK_CWD,
+  defaultMaxTurns: CLAUDE_SDK_DEFAULT_MAXTURNS,
+  workspaceMaxTurns: CLAUDE_SDK_WORKSPACE_MAXTURNS,
+  botAliases: BOT_ALIASES,
+  workspaceCommands: WORKSPACE_COMMANDS,
+} satisfies SdkConfig;
 
-mkdirSync(sandboxConfig.directory, { recursive: true });
-logger.info(`Sandbox ${sandboxConfig.enabled ? 'enabled' : 'disabled'} (cwd: ${sandboxConfig.directory})`);
+mkdirSync(sdkConfig.cwd, { recursive: true });
+logger.info(`SdkConfig defaultMaxTurns=${sdkConfig.defaultMaxTurns} workspaceMaxTurns=${sdkConfig.workspaceMaxTurns} (cwd: ${sdkConfig.cwd})`);

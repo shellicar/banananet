@@ -4,7 +4,6 @@ import type { CallbackResponse, Reply } from '@simple-claude-bot/shared/shared/t
 import { z } from 'zod';
 import type { BrainClient } from './brainClient';
 import type { PlatformChannel } from './platform/types';
-import { buildSystemPrompt } from './systemPrompts';
 
 export interface CommandContext {
   brain: BrainClient;
@@ -15,7 +14,8 @@ export interface CommandContext {
   getProcessing(): Promise<void> | undefined;
   setProcessing(p: Promise<void>): void;
   getPlatformChannel(): PlatformChannel | undefined;
-  getSystemPrompt(): string;
+  getBotUserId(): string | undefined;
+  getBotUsername(): string | undefined;
 }
 
 type CommandHandler = (ctx: CommandContext, args: string[]) => Promise<void>;
@@ -82,8 +82,9 @@ async function handlePrompt(ctx: CommandContext, _args: string[]): Promise<void>
     throw new Error('Platform channel not available');
   }
   const response = await ctx.brain.unprompted({
-    prompt: 'Share a random interesting thought, fun fact, shower thought, or observation. Be concise and conversational.',
-    systemPrompt: ctx.getSystemPrompt(),
+    trigger: 'random-thought',
+    botUserId: ctx.getBotUserId(),
+    botUsername: ctx.getBotUsername(),
   });
   if (response.spoke && response.replies.length > 0) {
     await ctx.dispatchReplies(channel, response.replies);
@@ -118,7 +119,7 @@ async function handleReset(ctx: CommandContext, args: string[]): Promise<void> {
   }
   logger.info(`Reset command received (fetching ${count} messages)`);
   const messages = await channel.fetchHistory(count);
-  const response = await ctx.brain.reset({ messages, systemPrompt: ctx.getSystemPrompt() });
+  const response = await ctx.brain.reset({ messages });
   if (response.error) {
     logger.error(`Reset error: ${response.error}`);
   } else {
@@ -145,8 +146,6 @@ async function handleDirect(ctx: CommandContext, args: string[]): Promise<void> 
   logger.info(`Direct query: ${prompt}`);
   const response = await ctx.brain.direct({
     prompt,
-    systemPrompt: buildSystemPrompt({ type: 'direct' }),
-    allowedTools: ['WebSearch', 'WebFetch', 'Bash'],
   });
   if (response.error) {
     logger.error(`Direct query error: ${response.error}`);

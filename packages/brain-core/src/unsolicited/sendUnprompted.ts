@@ -6,21 +6,31 @@ import { executeQuery } from '../executeQuery';
 import { claudeGlobals } from '../globals';
 import { parseResponse } from '../parseResponse';
 import { saveSession } from '../session/saveSession';
-import type { SandboxConfig, UnpromptedRequestOutput } from '../types';
+import { buildIdlePrompt, buildManualPrompt, buildSystemPrompt } from '../systemPrompts';
+import type { SdkConfig, UnpromptedRequestOutput } from '../types';
 
-export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sandboxConfig: SandboxConfig): Promise<{ replies: Reply[]; spoke: boolean }> {
+export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sdkConfig: SdkConfig): Promise<{ replies: Reply[]; spoke: boolean }> {
   try {
-    logger.info(`Unprompted: ${body.prompt}`);
+    const prompt = body.trigger === 'workplay' ? buildIdlePrompt() : buildManualPrompt();
+    logger.info(`Unprompted (${body.trigger}): ${prompt}`);
+
+    const systemPrompt = buildSystemPrompt({
+      type: 'discord',
+      workspaceEnabled: body.capabilities?.WORKSPACE ?? true,
+      workspaceCommands: sdkConfig.workspaceCommands,
+      botUserId: body.botUserId,
+      botUsername: body.botUsername,
+      botAliases: sdkConfig.botAliases,
+    });
 
     const sdkOptions = buildQueryOptions({
-      systemPrompt: body.systemPrompt,
-      allowedTools: body.allowedTools ?? [],
-      maxTurns: body.maxTurns ?? 1,
-      sandboxConfig,
+      systemPrompt,
+      capabilities: body.capabilities,
+      sdkConfig,
       sessionId: claudeGlobals.sessionId,
     });
 
-    const result = await executeQuery(audit, '/unprompted', body.prompt, sdkOptions, saveSession);
+    const result = await executeQuery(audit, '/unprompted', prompt, sdkOptions, saveSession);
 
     if (!result) {
       logger.warn('Empty unprompted response');
