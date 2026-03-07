@@ -9,7 +9,7 @@ import { claudeGlobals } from './globals';
 import { saveSession } from './session/saveSession';
 import type { SdkConfig } from './types';
 
-export async function compactSession(audit: AuditWriter, sdkConfig: SdkConfig, resumeSessionAt?: UUID): Promise<string> {
+export async function compactSession(audit: AuditWriter, sdkConfig: SdkConfig, resumeSessionAt?: UUID, abortController?: AbortController): Promise<string> {
   if (!claudeGlobals.sessionId) {
     logger.warn('No session to compact');
     return 'No session to compact';
@@ -25,6 +25,7 @@ export async function compactSession(audit: AuditWriter, sdkConfig: SdkConfig, r
     maxTurns: 1,
     resume: claudeGlobals.sessionId,
     ...(resumeSessionAt ? { resumeSessionAt } : {}),
+    ...(abortController ? { abortController } : {}),
   } satisfies Options;
 
   const result = await executeQuery(audit, '/compact', '/compact', options, saveSession);

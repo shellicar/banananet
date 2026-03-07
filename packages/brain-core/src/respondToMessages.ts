@@ -11,7 +11,7 @@ import { saveSession } from './session/saveSession';
 import { buildSystemPrompt } from './systemPrompts';
 import type { RespondRequestOutput, SdkConfig } from './types';
 
-export async function respondToMessages(audit: AuditWriter, body: RespondRequestOutput, sdkConfig: SdkConfig): Promise<Reply[]> {
+export async function respondToMessages(audit: AuditWriter, body: RespondRequestOutput, sdkConfig: SdkConfig, abortController?: AbortController): Promise<Reply[]> {
   const contentBlocks = buildContentBlocks(body.messages);
   const hasImages = contentBlocks.some((b) => b.type === 'image');
 
@@ -49,6 +49,7 @@ export async function respondToMessages(audit: AuditWriter, body: RespondRequest
     capabilities: body.capabilities,
     sdkConfig,
     sessionId: claudeGlobals.sessionId,
+    abortController,
   });
 
   const result = await executeQuery(audit, '/respond', prompt, options, saveSession);

@@ -9,7 +9,7 @@ import { saveSession } from '../session/saveSession';
 import { buildIdlePrompt, buildManualPrompt, buildSystemPrompt } from '../systemPrompts';
 import type { SdkConfig, UnpromptedRequestOutput } from '../types';
 
-export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sdkConfig: SdkConfig): Promise<{ replies: Reply[]; spoke: boolean }> {
+export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequestOutput, sdkConfig: SdkConfig, abortController?: AbortController): Promise<{ replies: Reply[]; spoke: boolean }> {
   try {
     const prompt = body.trigger === 'workplay' ? buildIdlePrompt() : buildManualPrompt();
     logger.info(`Unprompted (${body.trigger}): ${prompt}`);
@@ -28,6 +28,7 @@ export async function sendUnprompted(audit: AuditWriter, body: UnpromptedRequest
       capabilities: body.capabilities,
       sdkConfig,
       sessionId: claudeGlobals.sessionId,
+      abortController,
     });
 
     const result = await executeQuery(audit, '/unprompted', prompt, sdkOptions, saveSession);

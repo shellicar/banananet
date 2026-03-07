@@ -12,7 +12,7 @@ import { buildSystemPrompt } from '../systemPrompts';
 import type { ResetRequestOutput, SdkConfig } from '../types';
 import { saveSession } from './saveSession';
 
-export async function resetSession(audit: AuditWriter, body: ResetRequestOutput, sdkConfig: SdkConfig): Promise<string> {
+export async function resetSession(audit: AuditWriter, body: ResetRequestOutput, sdkConfig: SdkConfig, abortController?: AbortController): Promise<string> {
   logger.info('Resetting session...');
 
   // Delete old session
@@ -50,6 +50,7 @@ export async function resetSession(audit: AuditWriter, body: ResetRequestOutput,
     maxTurns: 10,
     sdkConfig,
     sessionId: undefined,
+    abortController,
   });
 
   const result = await executeQuery(audit, '/reset', seedPrompt, options, saveSession);

@@ -8,11 +8,15 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 export function createHono(earsApp: EarsApp, port: number, signal: AbortSignal) {
   const app = new Hono();
 
-  app.get('/', (c) => c.json({ status: 'ok' }));
+  app.get('/', (c) => c.body(null, 204));
 
-  app.get('/api/version', (c) => c.json(Version));
+  const api = app.basePath('/api');
 
-  app.post('/api/callback/:requestId', async (c) => {
+  api.get('/health', (c) => c.json({ status: 'ok' }));
+
+  api.get('/version', (c) => c.json(Version));
+
+  api.post('/callback/:requestId', async (c) => {
     const result = await earsApp.handleCallback(c.req.param('requestId'), await c.req.json());
     return c.json(result.body, result.status as ContentfulStatusCode);
   });

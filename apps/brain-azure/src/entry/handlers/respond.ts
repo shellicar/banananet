@@ -3,7 +3,7 @@ import { processAndCallback } from '@simple-claude-bot/brain-core/processAndCall
 import { logger } from '@simple-claude-bot/shared/logger';
 import { RespondRequestSchema } from '@simple-claude-bot/shared/shared/platform/schema';
 import { handleError, parseJsonBody } from '../../shared/handleError';
-import { audit, callbackHeaders, sdkConfig } from '../../shared/startup';
+import { audit, callbackHeaders, sdkConfig, shutdown } from '../../shared/startup';
 
 export const handler: HttpHandler = async (request) => {
   try {
@@ -11,7 +11,7 @@ export const handler: HttpHandler = async (request) => {
     const body = RespondRequestSchema.parse(await parseJsonBody(request), { reportInput: true });
     logger.info(`/respond: parsed ${body.messages.length} messages, callback=${body.callbackUrl}`);
 
-    processAndCallback(body, audit, sdkConfig, callbackHeaders).catch((error) => logger.error(`/respond: unhandled error in background processing: ${error}`));
+    processAndCallback(body, audit, sdkConfig, callbackHeaders, shutdown.controller).catch((error) => logger.error(`/respond: unhandled error in background processing: ${error}`));
 
     return { status: 202 };
   } catch (error) {

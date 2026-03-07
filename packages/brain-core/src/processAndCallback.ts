@@ -7,7 +7,7 @@ import { postCallback } from './postCallback';
 import { respondToMessages } from './respondToMessages';
 import type { SdkConfig } from './types';
 
-export async function processAndCallback(body: z.output<typeof RespondRequestSchema>, audit: AuditWriter, sdkConfig: SdkConfig, callbackHeaders: Record<string, string>): Promise<void> {
+export async function processAndCallback(body: z.output<typeof RespondRequestSchema>, audit: AuditWriter, sdkConfig: SdkConfig, callbackHeaders: Record<string, string>, abortController?: AbortController): Promise<void> {
   const { callbackUrl } = body;
 
   logger.info(`processAndCallback: starting, callbackUrl=${callbackUrl}`);
@@ -18,7 +18,7 @@ export async function processAndCallback(body: z.output<typeof RespondRequestSch
   }, 8000);
 
   try {
-    const replies = await respondToMessages(audit, body, sdkConfig);
+    const replies = await respondToMessages(audit, body, sdkConfig, abortController);
     logger.info(`processAndCallback: complete, ${replies.length} replies`);
     await postCallback(callbackUrl, { type: 'message', replies }, callbackHeaders);
     logger.info(`processAndCallback: callback sent`);

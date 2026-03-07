@@ -27,7 +27,6 @@ var resolvedImage = image ?? '${acrLoginServer}/${defaultImageName}:${defaultIma
 resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
   name: appName
   location: location
-  kind: 'functionapp'
   tags: {
     'hidden-title': 'BananaNet - Brain'
   }
@@ -79,6 +78,7 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
       }]
     }
     template: {
+      terminationGracePeriodSeconds: 300
       containers: [
         {
           name: 'brain'
@@ -89,20 +89,12 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
           }
           env: [
             {
-              name: 'AzureWebJobsStorage'
-              secretRef: 'azurewebjobsstorage'
-            }
-            {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               secretRef: 'appinsightsconnectionstring'
             }
             {
               name: 'CLAUDE_CODE_OAUTH_TOKEN'
               secretRef: 'claudecodeoauthtoken'
-            }
-            {
-              name: 'FUNCTIONS_WORKER_RUNTIME'
-              value: 'node'
             }
             {
               name: 'TZ'
