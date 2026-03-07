@@ -31,31 +31,28 @@ COPY --from=base / /
 WORKDIR /app
 
 # Install runtime dependencies (claude-agent-sdk is external, claude-code is a subprocess)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/brain/package.json apps/brain/package.json
-COPY packages/brain-core/package.json packages/brain-core/package.json
-COPY packages/shared/package.json packages/shared/package.json
+COPY --chmod=750 package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chmod=750 apps/brain/package.json apps/brain/package.json
+COPY --chmod=750 packages/brain-core/package.json packages/brain-core/package.json
+COPY --chmod=750 packages/shared/package.json packages/shared/package.json
 RUN pnpm install --prod --frozen-lockfile --filter=@simple-claude-bot/brain...
+
+# Set node_modules permissions before dist (rarely changes, stays cached)
+RUN chmod o+x /app /app/apps /app/apps/brain \
+  && chmod -R o+rX /app/node_modules
 
 WORKDIR /app/apps/brain
 
 # Copy built output (esbuild bundle is self-contained)
-COPY apps/brain/dist/ dist/
+COPY --chmod=750 apps/brain/dist/ dist/
 
 # Copy Claude settings and hooks to staging (volume mount overlays /home/bot/.claude at runtime)
-COPY claude-home/ /opt/claude-home/
+COPY --chmod=750 claude-home/ /opt/claude-home/
+RUN chmod +x /opt/claude-home/hooks/*.sh
 
 # Copy scripts
-COPY scripts/claude-sandbox.sh /usr/local/bin/claude-sandbox
-COPY scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
-
-# Lock down app files and set permissions
-RUN chmod -R 750 /app \
-  && chmod o+x /app /app/apps /app/apps/brain \
-  && chmod -R o+rX /app/node_modules /app/apps/brain/node_modules \
-  && chmod +x /opt/claude-home/hooks/*.sh \
-  && chmod +x /usr/local/bin/claude-sandbox \
-  && chmod +x /usr/local/bin/entrypoint.sh
+COPY --chmod=755 scripts/claude-sandbox.sh /usr/local/bin/claude-sandbox
+COPY --chmod=755 scripts/brain-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV TZ=Australia/Melbourne
 ENV SANDBOX_DIR=/sandbox
