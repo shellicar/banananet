@@ -14,6 +14,8 @@ param insightsConnectionString string
 param storageConnectionString string
 @secure()
 param claudeCodeOauthToken string
+@secure()
+param callbackHeaders string
 param existingBuildHash string?
 param existingBuildTime string?
 
@@ -68,6 +70,10 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
           name: 'claudecodeoauthtoken'
           value: claudeCodeOauthToken
         }
+        {
+          name: 'callbackheaders'
+          value: callbackHeaders
+        }
       ]
     }
     template: {
@@ -111,6 +117,10 @@ resource app 'Microsoft.App/containerapps@2025-02-02-preview' = {
             {
               name: 'SANDBOX_DIR'
               value: '/sandbox'
+            }
+            {
+              name: 'CALLBACK_HEADERS'
+              secretRef: 'callbackheaders'
             }
             {
               name: 'BANANABOT_BUILD_HASH'
