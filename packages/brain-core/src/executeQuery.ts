@@ -12,6 +12,7 @@ import { hasSubType } from './hasSubType';
 import { SdkResult } from './sdk/SdkResult';
 
 export async function executeQuery(audit: AuditWriter, endpoint: string, prompt: string | AsyncIterable<SDKUserMessage>, options: Options, onSessionId: (id: UUID) => void): Promise<string> {
+  logger.info(`executeQuery: starting ${endpoint}`);
   const startTime = Date.now();
   const timer = setInterval(() => {
     const elapsed = Math.round((Date.now() - startTime) / 1000);
@@ -100,7 +101,7 @@ export async function executeQuery(audit: AuditWriter, endpoint: string, prompt:
   }
 
   const elapsed = Math.round((Date.now() - startTime) / 1000);
-  logger.info(`Response (${elapsed}s): ${result}`);
+  logger.info(`executeQuery: ${endpoint} complete in ${elapsed}s`);
 
   return result;
 }

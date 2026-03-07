@@ -10,6 +10,7 @@ import type { SdkConfig } from './types';
 export async function processAndCallback(body: z.output<typeof RespondRequestSchema>, audit: AuditWriter, sdkConfig: SdkConfig, callbackHeaders: Record<string, string>): Promise<void> {
   const { callbackUrl } = body;
 
+  logger.info(`processAndCallback: starting, callbackUrl=${callbackUrl}`);
   await postCallback(callbackUrl, { type: 'typing' }, callbackHeaders);
 
   const typingInterval = setInterval(() => {
@@ -18,10 +19,12 @@ export async function processAndCallback(body: z.output<typeof RespondRequestSch
 
   try {
     const replies = await respondToMessages(audit, body, sdkConfig);
+    logger.info(`processAndCallback: complete, ${replies.length} replies`);
     await postCallback(callbackUrl, { type: 'message', replies }, callbackHeaders);
+    logger.info(`processAndCallback: callback sent`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Background processing failed: ${errorMessage}`);
+    logger.error(`processAndCallback: failed: ${errorMessage}`);
 
     await postCallback(
       callbackUrl,
